@@ -24,16 +24,17 @@ class MatMul(Function):
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1gard = Tensor(np.matmul(grad_out, x2.T), require_grad=False) if ctx.parents[0].requires_grad else None
-        x2gard = Tensor(np.matmul(x1.T, grad_out), require_grad=False) if ctx.parents[1].requires_grad else None
-        return x1gard, x2gard
+        x1gard = Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False) if x1.requires_grad else None
+        x2gard = Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False) if x2.requires_grad else None
+        x1.grad = x1gard
+        x2.grad = x2gard
 
 class SUM(Function):
     def forward(ctx, x1):
         return Tensor(np.sum(x1.data), ctx=ctx)
 
     def backward(ctx, grad_out):
-        return Tensor(Tensor.ones(ctx.parents.shape), requires_grad=False) if ctx.parents[0].requires_grad else None 
+        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
         
 
 class Tensor:
@@ -49,8 +50,8 @@ class Tensor:
         return cls(np.eye(val), dtype=np.float32)
 
     @classmethod
-    def ones(cls, shape):
-        return cls(np.ones(shape, dtype=np.float32))
+    def ones(cls, shape, requires_grad=False):
+        return cls(np.ones(shape, dtype=np.float32), requires_grad=requires_grad)
 
     @classmethod
     def zeros(cls, shape):
@@ -101,7 +102,7 @@ class Tensor:
 
 
     def get_topo_graph(self):
-        topological = []
+        topological = [self]
         def _backward(node, visited, topological):
             if node.ctx is None:
                 return
@@ -115,39 +116,14 @@ class Tensor:
 
     def backward(self):
         # Only placeholder to be implemented
+        self.grad = Tensor(np.array(1), requires_grad=False)
         graph = self.get_topo_graph()
-        for node in reversed(graph):
-            node.grad = Tensor.zeros(node.data.shape)
+        for node in graph:
+            if node.ctx:
+                node.ctx.backward(node.grad)
 
 
 
-
-
-
-seed = np.random.get_state()
-
-x = torch.tensor(np.ones((3, 2)), dtype=torch.float32, requires_grad=True)
-y = torch.tensor(np.random.randn(2, 2), dtype=torch.float32, requires_grad=True)
-z = torch.matmul(x, y)
-r = z.sum()
-
-
-z.retain_grad()
-r.retain_grad()
-r.backward()
-print(r.grad)
-
-assert r.grad == 1
-assert torch.allclose(z.grad, torch.ones(z.shape))
-assert torch.allclose(x.grad, torch.matmul(z.grad, y.T))
-assert torch.allclose(y.grad, torch.matmul(x.T, z.grad))
-
-
-np.random.set_state(seed)
-xx = Tensor(np.ones((3, 2)), dtype=torch.float32, requires_grad=True)
-yy = Tensor(np.random.randn(2, 2), dtype=torch.float32, requires_grad=True)
-zz = xx.matmul(yy)
-rr = zz.sum()
 
 
 
