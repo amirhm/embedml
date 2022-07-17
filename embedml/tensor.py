@@ -1,5 +1,5 @@
-
 import numpy as np
+import torch
 
 
 class Function:
@@ -82,13 +82,9 @@ class Tensor:
         pass
 
 
-
-import torch
-import numpy as np
-
 x = torch.tensor(np.ones((3, 2)), dtype=torch.float32, requires_grad=True)
 y = torch.tensor(np.random.randn(2, 2), dtype=torch.float32, requires_grad=True)
-z = torch.matmul(x , y)
+z = torch.matmul(x, y)
 r = z.sum()
 
 z.retain_grad()

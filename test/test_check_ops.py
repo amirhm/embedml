@@ -1,5 +1,3 @@
-from tkinter import Y
-import pytest
 import numpy as np
 from embedml.tensor import Tensor
 
