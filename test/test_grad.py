@@ -22,23 +22,19 @@ def test_simple_grad():
 def test_grad_linear():
     seed = np.random.get_state()
 
-    x = torch.tensor(np.ones((3, 2)), dtype=torch.float32, requires_grad=True)
+    x = torch.tensor(np.ones((300, 2)), dtype=torch.float32, requires_grad=True)
     y = torch.tensor(np.random.randn(2, 2), dtype=torch.float32, requires_grad=True)
-    z = torch.matmul(x, y)
-    r = z.sum()
+    z = torch.matmul(x, y).sum()
 
 
     z.retain_grad()
-    r.retain_grad()
-    r.backward()
+    z.backward()
 
     np.random.set_state(seed)
-    xx = Tensor(np.ones((3, 2)), dtype=torch.float32, requires_grad=True)
+    xx = Tensor(np.ones((300, 2)), dtype=torch.float32, requires_grad=True)
     yy = Tensor(np.random.randn(2, 2), dtype=torch.float32, requires_grad=True)
-    zz = xx.matmul(yy)
-    rr = zz.sum()
-    rr.backward()
-
+    zz = xx.matmul(yy).sum()
+    zz.backward()
 
     assert np.allclose(z.grad, zz.grad.cpu())
     assert np.allclose(y.grad, yy.grad.cpu())
