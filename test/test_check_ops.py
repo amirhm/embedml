@@ -1,0 +1,32 @@
+from tkinter import Y
+import pytest
+import numpy as np
+from embedml.tensor import Tensor
+
+
+def test_simple():
+    xnp = np.eye(3)
+    ynp = np.ones((3, 8))
+    znp = np.matmul(xnp, ynp).sum()
+
+    x = Tensor.eye(3)
+    y = Tensor.ones((3, 8))
+    z = x.matmul(y).sum()
+
+    x = x.cpu()
+    y = y.cpu()
+
+    assert np.allclose(x, xnp)
+    assert np.allclose(y, ynp)
+    assert np.allclose(z.cpu(), znp)
+
+
+def test_addition():
+    xnp = np.ones((3, 3))
+    ynp = np.eye(3)
+    znp = xnp + ynp
+
+    x = Tensor.ones((3, 3))
+    y = Tensor.eye(3)
+    z = x + y
+    np.allclose(z.cpu(), znp)
