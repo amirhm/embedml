@@ -1,6 +1,7 @@
 import torch
 from embedml.tensor import Tensor
 import numpy as np
+import pytest
 
 
 def test_simple_grad_th():
@@ -39,3 +40,33 @@ def test_grad_linear():
     assert np.allclose(z.grad, zz.grad.cpu())
     assert np.allclose(y.grad, yy.grad.cpu())
     assert np.allclose(x.grad, xx.grad.cpu())
+
+
+@pytest.mark.parametrize("bs,feature_in,feature_out", [(2, 10, 2)])
+def test_linear_module(bs, feature_in, feature_out):
+    from torch import nn
+    inp = torch.randn(bs, feature_in)    
+    l1 = nn.Linear(feature_in, feature_out, bias=False)
+    w = np.random.randn(feature_out, feature_in)
+    b = np.random.randn(feature_out)
+    l1.weight = nn.Parameter(torch.tensor(w, dtype=torch.float32, requires_grad=True))
+    l1.bias = nn.Parameter(torch.tensor(b, dtype=torch.float32, requires_grad=True))
+
+    c = l1(inp).sum()
+    c.retain_grad()
+    c.backward()
+
+    x, W, b = Tensor(inp), Tensor(w.T), Tensor(b)
+
+    tl1 = x.matmul(W) 
+    tc = tl1.sum()
+    tc.backward()
+    assert np.allclose(l1.weight.grad, W.grad.data.T)
+
+
+
+
+
+
+
+
