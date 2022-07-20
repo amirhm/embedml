@@ -2,6 +2,18 @@ import numpy as np
 import torch
 
 
+def broadcast(data, shape):
+    src_shape = data.shape
+    src_dims = len(src_shape)
+    dims = len(shape)
+    if src_shape == shape:
+        return data
+    if dims < src_dims:
+        if shape[0] == src_shape[0]:
+            return data.sum(axis=-1)
+        elif shape[0] == src_shape[-1]:
+            return data.sum(axis=0)
+
 class Function:
     def __init__(self, function):
         self.func = function
@@ -10,10 +22,6 @@ class Function:
         self.parents = args
         return self.forward(*args, **kwargs)
 
-#    def __get__(self, instance, owner):
-#        from functools import partial
-#        return partial(self.__call__, instance)
-#
     def forward(ctx, *args, **kwargs): raise NotImplemented
     def backward(ctx, *args, **kwargs): raise NotImplemented
 
@@ -36,6 +44,14 @@ class SUM(Function):
     def backward(ctx, grad_out):
         ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
         
+class ADD(Function):
+    def forward(ctx, x1, x2):
+        return Tensor(x1.data + x2.data, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        x1, x2 = ctx.parents
+        x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
+        x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
 
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
@@ -67,6 +83,8 @@ class Tensor:
     @SUM
     def _sum(x1): pass
 
+    @ADD
+    def _add(x1, x2): pass
 
     def matmul(self, y):
         return self._matmul(self, y)
@@ -76,10 +94,8 @@ class Tensor:
 
     def __add__(self, other):
         if isinstance(other, int):
-            return type(self)(self.data + other)
-        else:
-            return type(self)(self.data + other.data)
-
+            other = Tensor(np.array(other))
+        return self._add(self, other)
     def __radd__(self, other):
         if isinstance(other, int):
             return type(self)(self.data + other)
@@ -88,15 +104,15 @@ class Tensor:
 
     def __mul__(self, other):
         if isinstance(other, int):
-            return type(self)(self.data + other)
+            return type(self)(self.data * other)
         else:
-            return type(self)(self.data + other.data)
+            return type(self)(self.data * other.data)
 
     def __rmul__(self, other):
         if isinstance(other, int):
-            return type(self)(self.data + other)
+            return type(self)(self.data * other)
         else:
-            return type(self)(self.data + other.data)
+            return type(self)(self.data * other.data)
 
 
 
