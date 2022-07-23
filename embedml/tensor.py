@@ -14,6 +14,7 @@ def broadcast(data, shape):
         elif shape[0] == src_shape[-1]:
             return data.sum(axis=0)
 
+
 class Function:
     def __init__(self, function):
         self.func = function
@@ -22,8 +23,8 @@ class Function:
         self.parents = args
         return self.forward(*args, **kwargs)
 
-    def forward(ctx, *args, **kwargs): raise NotImplemented
-    def backward(ctx, *args, **kwargs): raise NotImplemented
+    def forward(ctx, *args, **kwargs): raise NotImplementedError
+    def backward(ctx, *args, **kwargs): raise NotImplementedError
 
 
 class MatMul(Function):
@@ -37,13 +38,15 @@ class MatMul(Function):
         x1.grad = x1gard
         x2.grad = x2gard
 
+
 class SUM(Function):
     def forward(ctx, x1):
         return Tensor(np.sum(x1.data), ctx=ctx)
 
     def backward(ctx, grad_out):
         ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
-        
+
+
 class ADD(Function):
     def forward(ctx, x1, x2):
         return Tensor(x1.data + x2.data, ctx=ctx)
@@ -52,6 +55,7 @@ class ADD(Function):
         x1, x2 = ctx.parents
         x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
         x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+
 
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
@@ -96,6 +100,7 @@ class Tensor:
         if isinstance(other, int):
             other = Tensor(np.array(other))
         return self._add(self, other)
+
     def __radd__(self, other):
         if isinstance(other, int):
             return type(self)(self.data + other)
@@ -114,11 +119,9 @@ class Tensor:
         else:
             return type(self)(self.data * other.data)
 
-
-
-
     def get_topo_graph(self):
         topological = [self]
+
         def _backward(node, visited, topological):
             if node.ctx is None:
                 return
@@ -137,13 +140,3 @@ class Tensor:
         for node in graph:
             if node.ctx:
                 node.ctx.backward(node.grad)
-
-
-
-
-
-
-# x = Tensor(np.array(2), dtype=np.float32, requires_grad=True)
-
-# y = Tensor(np.array(3), dtype=np.float32, requires_grad=True)
-# z = y + x
