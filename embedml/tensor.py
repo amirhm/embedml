@@ -14,10 +14,9 @@ def broadcast(data, shape):
         elif shape[0] == src_shape[-1]:
             return data.sum(axis=0)
 
-
 class Function:
-    def __init__(self, function):
-        self.func = function
+    def __init__(self):
+        pass
 
     def __call__(self, *args, **kwargs):
         self.parents = args
@@ -27,16 +26,14 @@ class Function:
     def backward(ctx, *args, **kwargs): raise NotImplementedError
 
 
-class MatMul(Function):
+class MATMUL(Function):
     def forward(ctx, x1, x2):
         return Tensor(np.matmul(x1.data, x2.data), ctx=ctx)
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1gard = Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False) if x1.requires_grad else None
-        x2gard = Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False) if x2.requires_grad else None
-        x1.grad = x1gard
-        x2.grad = x2gard
+        x1.grad = Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False) if x1.requires_grad else None
+        x2.grad = Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False) if x2.requires_grad else None
 
 
 class SUM(Function):
@@ -80,16 +77,6 @@ class Tensor:
     def cpu(self):
         return np.array(self.data)
 
-
-    @MatMul
-    def _matmul(x1, x2): pass
-
-    @SUM
-    def _sum(x1): pass
-
-    @ADD
-    def _add(x1, x2): pass
-
     def matmul(self, y):
         return self._matmul(self, y)
 
@@ -101,19 +88,7 @@ class Tensor:
             other = Tensor(np.array(other))
         return self._add(self, other)
 
-    def __radd__(self, other):
-        if isinstance(other, int):
-            return type(self)(self.data + other)
-        else:
-            return type(self)(self.data + other.data)
-
     def __mul__(self, other):
-        if isinstance(other, int):
-            return type(self)(self.data * other)
-        else:
-            return type(self)(self.data * other.data)
-
-    def __rmul__(self, other):
         if isinstance(other, int):
             return type(self)(self.data * other)
         else:
@@ -140,3 +115,11 @@ class Tensor:
         for node in graph:
             if node.ctx:
                 node.ctx.backward(node.grad)
+
+for func in ['MATMUL', 'SUM', 'ADD']:
+    setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
+
+for func in ['add', 'mul']:
+    if method:=getattr(Tensor, f'__{func}__', False): 
+        setattr(Tensor, f"__r{func}__" , lambda self, x: method(self, x))
+        setattr(Tensor, f"__i{func}__" , lambda self, x: method(x, self))
