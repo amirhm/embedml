@@ -8,11 +8,10 @@ def broadcast(data, shape):
     dims = len(shape)
     if src_shape == shape:
         return data
-    if dims < src_dims:
-        if shape[0] == src_shape[0]:
-            return data.sum(axis=-1)
-        elif shape[0] == src_shape[-1]:
-            return data.sum(axis=0)
+    if shape[0] == src_shape[0]:
+        return data.sum(axis=-1)
+    elif shape[0] == src_shape[-1]:
+        return data.sum(axis=0)
 
 class Function:
     def __init__(self):
@@ -37,7 +36,7 @@ class MATMUL(Function):
 
 
 class SUM(Function):
-    def forward(ctx, x1):
+    def forward(ctx, x1, dim=None):
         return Tensor(np.sum(x1.data), ctx=ctx)
 
     def backward(ctx, grad_out):
@@ -52,6 +51,40 @@ class ADD(Function):
         x1, x2 = ctx.parents
         x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
         x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+
+
+class MAX(Function):
+    def forward(ctx, x1, **kwargs):
+        return Tensor(np.max(x1.data, **kwargs), ctx=ctx)
+
+    def backward(ctx, grad_out):
+        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
+
+class EXP(Function):
+    def forward(ctx, x1):
+        return Tensor(np.exp(x1.data), ctx=ctx)
+
+    def backward(ctx, grad_out):
+        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
+
+
+
+class SUB(Function):
+    def forward(ctx, x1, x2):
+        return Tensor(x1.data - x2.data, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        x1, x2 = ctx.parents
+        x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
+        x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+
+class RELU(Function):pass
+
+
+class POW(Function): pass
+
+
+class LOG(Function): pass
 
 
 class Tensor:
@@ -74,25 +107,29 @@ class Tensor:
     def zeros(cls, shape):
         return cls(np.zeros(shape, dtype=np.float32))
 
+    @staticmethod
+    def totensor(func):
+
+        def inner(*args, **kwargs):
+            vals = (Tensor(np.array(val),dtype=np.float32) if isinstance(val, int) else val for val in args)
+            return func(*vals)
+        return inner
+
+
     def cpu(self):
         return np.array(self.data)
 
     def matmul(self, y):
         return self._matmul(self, y)
 
-    def sum(self):
-        return self._sum(self)
+    def sum(self): return self._sum(self)
 
-    def __add__(self, other):
-        if isinstance(other, int):
-            other = Tensor(np.array(other))
-        return self._add(self, other)
+    def exp(self): return self._exp(self)
+    def max(self, **kwargs): return self._max(self, **kwargs)
 
-    def __mul__(self, other):
-        if isinstance(other, int):
-            return type(self)(self.data * other)
-        else:
-            return type(self)(self.data * other.data)
+    def add(self, other): return self._add(self, other)
+    def mul(self, other): return type(self)(self.data * other.data)
+    def sub(self, other): return self._sub(self, other)
 
     def get_topo_graph(self):
         topological = [self]
@@ -116,10 +153,27 @@ class Tensor:
             if node.ctx:
                 node.ctx.backward(node.grad)
 
-for func in ['MATMUL', 'SUM', 'ADD']:
+    def __repr__(self):
+        return f"{self.data}"
+
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
-for func in ['add', 'mul']:
-    if method:=getattr(Tensor, f'__{func}__', False): 
-        setattr(Tensor, f"__r{func}__" , lambda self, x: method(self, x))
-        setattr(Tensor, f"__i{func}__" , lambda self, x: method(x, self))
+
+
+def add_method(name, method):
+    setattr(Tensor, f"__{name}__" , Tensor.totensor(method))
+    setattr(Tensor, f"__r{name}__" , lambda self, x: Tensor.totensor(method)(x, self))
+
+for func in ['add', 'mul', 'sub']: add_method(func, getattr(Tensor, func))
+
+a = Tensor(np.array(10))
+
+b = Tensor(np.array(23))
+
+
+print((a + b).data )
+print((a + 2).data)
+print(a.__add__)
+print(a.__sub__)
+print(a.__mul__)
