@@ -2,10 +2,9 @@ import numpy as np
 from collections import deque
 
 
-def extend(data, shape):
-    src_shape = data.shape
-    if src_shape == ():
-        return data * np.ones(shape)
+def extend(data, shape, axis):
+    ext_shape = tuple(shape[i] if axis in (i, -1) else 1 for i in range(len(shape)))
+    return np.tile(data, ext_shape)
 
 
 def broadcast(data, shape):
@@ -41,11 +40,12 @@ class MATMUL(Function):
 
 
 class SUM(Function):
-    def forward(ctx, x1, dim=None):
-        return Tensor(np.sum(x1.data), ctx=ctx)
+    def forward(ctx, x1, **kwargs):
+        ctx.axis = kwargs.get("axis", -1)
+        return Tensor(np.sum(x1.data, **kwargs, keepdims=True), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor(extend(grad_out, ctx.parents[0].shape).data, requires_grad=False) if ctx.parents[0].requires_grad else None
+        ctx.parents[0].grad = Tensor(extend(grad_out.data, ctx.parents[0].shape, ctx.axis), requires_grad=False) if ctx.parents[0].requires_grad else None
 
 
 class ADD(Function):
@@ -140,7 +140,7 @@ class Tensor:
     def matmul(self, y):
         return self._matmul(self, y)
 
-    def sum(self): return self._sum(self)
+    def sum(self, **kwargs): return self._sum(self, **kwargs)
 
     def exp(self): return self._exp(self)
     def max(self, **kwargs): return self._max(self, **kwargs)
