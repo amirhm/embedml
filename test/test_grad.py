@@ -20,7 +20,7 @@ def test_simple_grad():
     assert x.grad.cpu() == 2
 
 
-def test_simple_grad_positions():
+def test_simple_grad_positions_1():
     x = Tensor(np.array(2), dtype=torch.float32, requires_grad=True)
     y = 8 + x + 2 * 3
     y.backward()
@@ -28,7 +28,7 @@ def test_simple_grad_positions():
     assert x.grad.cpu() == 1
 
 
-def test_simple_grad_positions():
+def test_simple_grad_positions_2():
     x = Tensor(np.array(2), dtype=torch.float32, requires_grad=True)
     y = 8 * x * 2 * 3
     y.backward()
@@ -69,11 +69,10 @@ def test_grad_linear():
     assert np.allclose(c.grad, cc.grad.cpu())
 
 
-
 @pytest.mark.parametrize("bs,feature_in,feature_out", [(2, 10, 2)])
 def test_linear_module(bs, feature_in, feature_out):
     from torch import nn
-    inp = torch.randn(bs, feature_in)    
+    inp = torch.randn(bs, feature_in)
     l1 = nn.Linear(feature_in, feature_out, bias=True)
     w = np.random.randn(feature_out, feature_in)
     b = np.random.randn(feature_out)
@@ -88,19 +87,18 @@ def test_linear_module(bs, feature_in, feature_out):
 
     x, W, b = Tensor(inp), Tensor(w.T), Tensor(b)
 
-    tc0 = x.matmul(W) 
-    tc = tc0 + b 
+    tc0 = x.matmul(W)
+    tc = tc0 + b
 
-    assert np.allclose(c0.detach().numpy(), tc.data)    
+    assert np.allclose(c0.detach().numpy(), tc.data)
     tc1 = tc.sum()
-    assert np.allclose(c.detach().numpy(), tc1.data)    
+    assert np.allclose(c.detach().numpy(), tc1.data)
     tc1.backward()
     assert np.allclose(l1.weight.grad, W.grad.data.T)
     assert np.allclose(l1.bias.grad, b.grad.data)
 
 
 def test_exp_grad():
-    
     x = torch.empty((5, 10)).random_(10).requires_grad_()
     e = x.exp()
     z = e.sum()
@@ -119,10 +117,8 @@ def test_exp_grad():
 
 
 def test_max_grad():
-
-
     x = torch.empty((5, 10)).random_().requires_grad_(True)
-    m = x.max(dim=1, keepdim=True).values 
+    m = x.max(dim=1, keepdim=True).values
     r = (x - m)
     z = r.sum()
     m.retain_grad()
@@ -130,9 +126,8 @@ def test_max_grad():
     z.retain_grad()
     z.backward()
 
-
     xt = Tensor(x.detach().numpy())
-    mt = xt.max(axis=1, keepdims=True) 
+    mt = xt.max(axis=1, keepdims=True)
     rt = (xt - mt)
     zt = rt.sum()
     zt.backward()
@@ -141,11 +136,11 @@ def test_max_grad():
 
 def test_softmax():
     from torch import nn
-    sm =nn.Softmax(dim=1)
+    sm = nn.Softmax(dim=1)
     x = torch.empty((5, 10)).random_().requires_grad_(True)
     sm_out = sm(x)
 
-    ## torch imp:
+    # torch imp:
     r = (x - x.max(dim=1, keepdim=True).values)
     e = r.exp()
     s = e.sum(dim=1, keepdim=True)
@@ -153,7 +148,7 @@ def test_softmax():
 
     assert np.allclose(sm_th.detach().numpy(), sm_out.detach().numpy())
 
-    xt = Tensor(x.detach().numpy())
+    # xt = Tensor(x.detach().numpy())
     # rt = xt - xt.max(dim=1)
     # et = rt.exp()
     # st = et.sum()
