@@ -2,6 +2,12 @@ import numpy as np
 from collections import deque
 
 
+def extend(data, shape):
+    src_shape = data.shape
+    if src_shape == ():
+        return data * np.ones(shape)
+
+
 def broadcast(data, shape):
     src_shape = data.shape
     #  src_dims = len(src_shape)
@@ -15,9 +21,6 @@ def broadcast(data, shape):
 
 
 class Function:
-    def __init__(self):
-        pass
-
     def __call__(self, *args, **kwargs):
         ctx = type(self)()
         ctx.parents = args
@@ -42,7 +45,7 @@ class SUM(Function):
         return Tensor(np.sum(x1.data), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
+        ctx.parents[0].grad = Tensor(extend(grad_out, ctx.parents[0].shape).data, requires_grad=False) if ctx.parents[0].requires_grad else None
 
 
 class ADD(Function):
@@ -87,9 +90,6 @@ class MUL(Function):
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
-        x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
-
         x1.grad = Tensor(grad_out.cpu() * x2.data, requires_grad=False) if x1.requires_grad else None
         x2.grad = Tensor(grad_out.cpu() * x1.data, requires_grad=False) if x2.requires_grad else None
 
@@ -131,7 +131,7 @@ class Tensor:
 
         def inner(*args, **kwargs):
             vals = (Tensor(np.array(val), dtype=np.float32, requires_grad=False) if isinstance(val, int) else val for val in args)
-            return func(*vals)
+            return func(*vals, **kwargs)
         return inner
 
     def cpu(self):

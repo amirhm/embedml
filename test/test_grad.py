@@ -44,7 +44,7 @@ def test_grad_linear():
     b = torch.tensor(np.random.randn(2), dtype=torch.float32, requires_grad=True)
     z = torch.matmul(x, y)
     a = z + b
-    c = a.sum()
+    c = a.sum() * 10
 
     z.retain_grad()
     a.retain_grad()
@@ -57,7 +57,7 @@ def test_grad_linear():
     bb = Tensor(np.random.randn(2), dtype=torch.float32, requires_grad=True)
     zz = xx.matmul(yy)
     aa = zz + bb
-    cc = aa.sum()
+    cc = aa.sum() * 10
 
     cc.backward()
 
