@@ -39,4 +39,3 @@ def test_mult():
     y = Tensor.eye(3)
     z = 2 * x + y * 4
     assert np.allclose(z.cpu(), znp)
-

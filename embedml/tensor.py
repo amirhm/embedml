@@ -1,17 +1,18 @@
 import numpy as np
-import torch
+from collections import deque
 
 
 def broadcast(data, shape):
     src_shape = data.shape
-    src_dims = len(src_shape)
-    dims = len(shape)
+    #  src_dims = len(src_shape)
+    #  dims = len(shape)
     if src_shape == shape:
         return data
     if shape[0] == src_shape[0]:
         return data.sum(axis=-1)
     elif shape[0] == src_shape[-1]:
         return data.sum(axis=0)
+
 
 class Function:
     def __init__(self):
@@ -41,7 +42,7 @@ class SUM(Function):
         return Tensor(np.sum(x1.data), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
+        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
 
 
 class ADD(Function):
@@ -59,15 +60,15 @@ class MAX(Function):
         return Tensor(np.max(x1.data, **kwargs), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
+        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
+
 
 class EXP(Function):
     def forward(ctx, x1):
         return Tensor(np.exp(x1.data), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None 
-
+        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
 
 
 class SUB(Function):
@@ -93,13 +94,16 @@ class MUL(Function):
         x2.grad = Tensor(grad_out.cpu() * x1.data, requires_grad=False) if x2.requires_grad else None
 
 
-class RELU(Function):pass
+class RELU(Function):
+    pass
 
 
-class POW(Function): pass
+class POW(Function):
+    pass
 
 
-class LOG(Function): pass
+class LOG(Function):
+    pass
 
 
 class Tensor:
@@ -126,10 +130,9 @@ class Tensor:
     def totensor(func):
 
         def inner(*args, **kwargs):
-            vals = (Tensor(np.array(val),dtype=np.float32, requires_grad=False) if isinstance(val, int) else val for val in args)
+            vals = (Tensor(np.array(val), dtype=np.float32, requires_grad=False) if isinstance(val, int) else val for val in args)
             return func(*vals)
         return inner
-
 
     def cpu(self):
         return np.array(self.data)
@@ -171,13 +174,14 @@ class Tensor:
 #    def __repr__(self):
 #        return f"{self.data}"
 
+
 for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
 
-
 def add_method(name, method):
-    setattr(Tensor, f"__{name}__" , lambda self, x: Tensor.totensor(method)(self, x))
-    setattr(Tensor, f"__r{name}__" , lambda self, x: Tensor.totensor(method)(self, x))
+    setattr(Tensor, f"__{name}__", lambda self, x: Tensor.totensor(method)(self, x))
+    setattr(Tensor, f"__r{name}__", lambda self, x: Tensor.totensor(method)(self, x))
 
-for func in ['add', 'mul', 'sub']: add_method(func, getattr(Tensor, func))
+
+deque((add_method(func, getattr(Tensor, func)) for func in ['add', 'mul', 'sub']), maxlen=0)
