@@ -17,8 +17,23 @@ def test_simple_grad():
     y = 4 + x * 2 + 3
     y.backward()
     assert y.cpu() == 11
-    # assert x.grad == 2
+    assert x.grad.cpu() == 2
 
+
+def test_simple_grad_positions():
+    x = Tensor(np.array(2), dtype=torch.float32, requires_grad=True)
+    y = 8 + x + 2 * 3
+    y.backward()
+    assert y.cpu() == 16
+    assert x.grad.cpu() == 1
+
+
+def test_simple_grad_positions():
+    x = Tensor(np.array(2), dtype=torch.float32, requires_grad=True)
+    y = 8 * x * 2 * 3
+    y.backward()
+    assert y.cpu() == 96
+    assert x.grad.cpu() == 48
 
 
 def test_grad_linear():
@@ -121,11 +136,7 @@ def test_max_grad():
     rt = (xt - mt)
     zt = rt.sum()
     zt.backward()
-
-
     assert np.allclose(zt.data, z.detach().numpy())
-
-
 
 
 def test_softmax():

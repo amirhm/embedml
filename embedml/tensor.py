@@ -18,8 +18,9 @@ class Function:
         pass
 
     def __call__(self, *args, **kwargs):
-        self.parents = args
-        return self.forward(*args, **kwargs)
+        ctx = type(self)()
+        ctx.parents = args
+        return ctx.forward(*args, **kwargs)
 
     def forward(ctx, *args, **kwargs): raise NotImplementedError
     def backward(ctx, *args, **kwargs): raise NotImplementedError
@@ -78,6 +79,20 @@ class SUB(Function):
         x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
         x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
 
+
+class MUL(Function):
+    def forward(ctx, x1, x2):
+        return Tensor(x1.data * x2.data, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        x1, x2 = ctx.parents
+        x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
+        x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+
+        x1.grad = Tensor(grad_out.cpu() * x2.data, requires_grad=False) if x1.requires_grad else None
+        x2.grad = Tensor(grad_out.cpu() * x1.data, requires_grad=False) if x2.requires_grad else None
+
+
 class RELU(Function):pass
 
 
@@ -111,7 +126,7 @@ class Tensor:
     def totensor(func):
 
         def inner(*args, **kwargs):
-            vals = (Tensor(np.array(val),dtype=np.float32) if isinstance(val, int) else val for val in args)
+            vals = (Tensor(np.array(val),dtype=np.float32, requires_grad=False) if isinstance(val, int) else val for val in args)
             return func(*vals)
         return inner
 
@@ -128,7 +143,7 @@ class Tensor:
     def max(self, **kwargs): return self._max(self, **kwargs)
 
     def add(self, other): return self._add(self, other)
-    def mul(self, other): return type(self)(self.data * other.data)
+    def mul(self, other): return self._mul(self, other)
     def sub(self, other): return self._sub(self, other)
 
     def get_topo_graph(self):
@@ -138,7 +153,7 @@ class Tensor:
             if node.ctx is None:
                 return
             for n in node.ctx.parents:
-                if n not in visited:
+                if n not in visited and n.requires_grad:
                     visited.add(n)
                     topological.append(n)
                     _backward(n, visited, topological)
@@ -153,27 +168,16 @@ class Tensor:
             if node.ctx:
                 node.ctx.backward(node.grad)
 
-    def __repr__(self):
-        return f"{self.data}"
+#    def __repr__(self):
+#        return f"{self.data}"
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
 
 
 def add_method(name, method):
-    setattr(Tensor, f"__{name}__" , Tensor.totensor(method))
-    setattr(Tensor, f"__r{name}__" , lambda self, x: Tensor.totensor(method)(x, self))
+    setattr(Tensor, f"__{name}__" , lambda self, x: Tensor.totensor(method)(self, x))
+    setattr(Tensor, f"__r{name}__" , lambda self, x: Tensor.totensor(method)(self, x))
 
 for func in ['add', 'mul', 'sub']: add_method(func, getattr(Tensor, func))
-
-a = Tensor(np.array(10))
-
-b = Tensor(np.array(23))
-
-
-print((a + b).data )
-print((a + 2).data)
-print(a.__add__)
-print(a.__sub__)
-print(a.__mul__)
