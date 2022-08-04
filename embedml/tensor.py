@@ -9,17 +9,19 @@ def extend(data, shape, axis):
 
 def broadcast(data, shape):
     src_shape = data.shape
-    #  src_dims = len(src_shape)
-    #  dims = len(shape)
     if src_shape == shape:
         return data
     if shape[0] == src_shape[0]:
         return data.sum(axis=-1)
     elif shape[0] == src_shape[-1]:
         return data.sum(axis=0)
+    elif shape[1] == src_shape[1]:
+        return data.sum(axis=0, keepdims=True)
 
 
 class Function:
+    def __init__(self):
+        self.outs = []
     def __call__(self, *args, **kwargs):
         ctx = type(self)()
         ctx.parents = args
@@ -68,10 +70,12 @@ class MAX(Function):
 
 class EXP(Function):
     def forward(ctx, x1):
-        return Tensor(np.exp(x1.data), ctx=ctx)
+        ret = Tensor(np.exp(x1.data), ctx=ctx)
+        ctx.outs.append(ret)
+        return ret 
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
+        ctx.parents[0].grad = (grad_out * ctx.outs[0]) if ctx.parents[0].requires_grad else None 
 
 
 class SUB(Function):
@@ -81,7 +85,7 @@ class SUB(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
-        x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+        x2.grad = Tensor(broadcast(-grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
 
 
 class MUL(Function):
@@ -181,7 +185,7 @@ for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL']:
 
 def add_method(name, method):
     setattr(Tensor, f"__{name}__", lambda self, x: Tensor.totensor(method)(self, x))
-    setattr(Tensor, f"__r{name}__", lambda self, x: Tensor.totensor(method)(self, x))
+    setattr(Tensor, f"__r{name}__", lambda self, x: Tensor.totensor(method)(x, self))
 
 
 deque((add_method(func, getattr(Tensor, func)) for func in ['add', 'mul', 'sub']), maxlen=0)
