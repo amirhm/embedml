@@ -96,39 +96,3 @@ def test_linear_module(bs, feature_in, feature_out):
     tc1.backward()
     assert np.allclose(l1.weight.grad, W.grad.data.T)
     assert np.allclose(l1.bias.grad, b.grad.data)
-
-
-def test_exp_grad():
-    x = torch.empty((5, 10)).random_(10).requires_grad_()
-    e = x.exp()
-    z = e.sum()
-    e.retain_grad()
-    z.retain_grad()
-    z.backward()
-
-    xt = Tensor(x.detach().numpy())
-    et = xt.exp()
-    zt = et.sum()
-    zt.backward()
-
-    assert np.allclose(x.detach().numpy(), xt.data)
-    assert np.allclose(e.detach().numpy(), et.data)
-    assert np.allclose(e.grad, et.grad.data)
-
-
-def test_max_grad():
-    x = torch.empty((5, 10)).random_().requires_grad_(True)
-    m = x.max(dim=1, keepdim=True).values
-    r = (x - m)
-    z = r.sum()
-    m.retain_grad()
-    r.retain_grad()
-    z.retain_grad()
-    z.backward()
-
-    xt = Tensor(x.detach().numpy())
-    mt = xt.max(axis=1, keepdims=True)
-    rt = (xt - mt)
-    zt = rt.sum()
-    zt.backward()
-    assert np.allclose(zt.data, z.detach().numpy())
