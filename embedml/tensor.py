@@ -12,9 +12,9 @@ def broadcast(data, shape):
     if src_shape == shape:
         return data
     if shape[0] == src_shape[0]:
-        return data.sum(axis=-1)
+        return data.sum(axis=-1, keepdims=True)
     elif shape[0] == src_shape[-1]:
-        return data.sum(axis=0)
+        return data.sum(axis=0, keepdims=True)
     elif shape[1] == src_shape[1]:
         return data.sum(axis=0, keepdims=True)
 
@@ -72,7 +72,7 @@ class EXP(Function):
     def forward(ctx, x1):
         ret = Tensor(np.exp(x1.data), ctx=ctx)
         ctx.outs.append(ret)
-        return ret 
+        return ret
 
     def backward(ctx, grad_out):
         ctx.parents[0].grad = (grad_out * ctx.outs[0]) if ctx.parents[0].requires_grad else None 
@@ -95,7 +95,7 @@ class MUL(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         x1.grad = Tensor(grad_out.cpu() * x2.data, requires_grad=False) if x1.requires_grad else None
-        x2.grad = Tensor(grad_out.cpu() * x1.data, requires_grad=False) if x2.requires_grad else None
+        x2.grad = Tensor(broadcast(grad_out.cpu() * x1.data, x2.shape), requires_grad=False) if x2.requires_grad else None
 
 
 class RELU(Function):
@@ -103,7 +103,18 @@ class RELU(Function):
 
 
 class POW(Function):
-    pass
+    def forward(ctx, x1, x2):
+        ret = Tensor(np.power(x1.data, x2.data), ctx=ctx)
+        ctx.outs.append(ret)
+        return ret
+
+    def backward(ctx, grad_out):
+        if ctx.parents[0].requires_grad:
+            tmp = ctx.parents[1] * np.power(ctx.parents[0].data, ctx.parents[1].data - 1)
+            ctx.parents[0].grad = (grad_out * tmp)
+        if ctx.parents[1].requires_grad:
+            tmp = Tensor(np.log(ctx.parents[0].data) * ctx.outs[0].data)
+            ctx.parents[1].grad = broadcast(grad_out * tmp, ctx.parents[1].shape)
 
 
 class LOG(Function):
@@ -147,7 +158,10 @@ class Tensor:
     def sum(self, **kwargs): return self._sum(self, **kwargs)
 
     def exp(self): return self._exp(self)
+    def pow(self, p): return self._pow(self, p)
     def max(self, **kwargs): return self._max(self, **kwargs)
+
+    def div(self, other): return self * (other ** -1)
 
     def add(self, other): return self._add(self, other)
     def mul(self, other): return self._mul(self, other)
@@ -180,7 +194,7 @@ class Tensor:
 #        return f"{self.data}"
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
 
@@ -189,4 +203,4 @@ def add_method(name, method):
     setattr(Tensor, f"__r{name}__", lambda self, x: Tensor.totensor(method)(x, self))
 
 
-deque((add_method(func, getattr(Tensor, func)) for func in ['add', 'mul', 'sub']), maxlen=0)
+deque((add_method(func, getattr(Tensor, func)) for func in ['add', 'mul', 'sub', 'pow']), maxlen=0)

@@ -1,5 +1,6 @@
 import numpy as np
 from embedml.tensor import Tensor
+import torch
 
 
 def test_mult():
@@ -11,3 +12,40 @@ def test_mult():
     y = Tensor.eye(3)
     z = 2 * x + y * 4
     assert np.allclose(z.cpu(), znp)
+
+
+def test_mat_mul():
+    xnp = np.random.randn(5, 10)
+    ynp = np.random.randn(5, 1)
+    znp = xnp * ynp
+
+    x = Tensor(xnp)
+    y = Tensor(ynp)
+    z = x * y
+
+    assert np.allclose(z.cpu(), znp)
+
+
+def test_mat_mul_grad():
+    xnp = np.random.randn(5, 10)
+    ynp = np.random.randn(5, 1)
+
+    x = torch.tensor(xnp, requires_grad=True)
+    y = torch.tensor(ynp, requires_grad=True)
+    z = x * y
+    list(map(lambda x: x.retain_grad(), [x, y, z]))
+
+    z.sum().backward()
+
+    xt = Tensor(xnp)
+    yt = Tensor(ynp)
+    zt = xt * yt
+    zt.sum().backward()
+
+    assert np.array_equal(zt.cpu(), z.detach().numpy())
+    assert np.array_equal(zt.grad.cpu(), z.grad)
+    assert np.array_equal(xt.grad.cpu(), x.grad)
+    assert xt.grad.shape == (x.grad.shape)
+    assert yt.grad.shape == (y.grad.shape)
+
+    assert np.allclose(yt.grad.cpu(), y.grad)
