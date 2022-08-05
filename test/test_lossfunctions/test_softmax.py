@@ -21,7 +21,7 @@ def test_softmax():
     rt = xt - xt.max(axis=1, keepdims=True)
     et = rt.exp()
     st = et.sum(axis=1)
-    smt = et / st
+    smt = et.div(st)
 
     assert np.allclose(r.detach().numpy(), rt.data)
     assert np.allclose(e.detach().numpy(), et.data)
@@ -43,11 +43,12 @@ def test_softmax_grad():
     rt = xt - xt.max(axis=1, keepdims=True)
     et = rt.exp()
     st = et.sum(axis=1)
-    smt = et / st
+    # pt = st ** -1
+    smt = et.div(st)
 
     smt.sum().backward()
-
-    assert np.allclose(r.grad, rt.grad.data)
-    assert np.allclose(e.grad, et.grad.data)
-    assert np.allclose(s.grad, st.grad.data)
     assert np.allclose(sm.grad, smt.grad.data)
+    assert np.allclose(x.grad, xt.grad.data)
+#    assert np.allclose(s.grad, st.grad.data)
+#    assert np.allclose(r.grad, rt.grad.data)
+#    assert np.allclose(e.grad, et.grad.data)
