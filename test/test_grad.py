@@ -132,26 +132,3 @@ def test_max_grad():
     zt = rt.sum()
     zt.backward()
     assert np.allclose(zt.data, z.detach().numpy())
-
-
-def test_softmax():
-    from torch import nn
-    sm = nn.Softmax(dim=1)
-    x = torch.empty((5, 10)).random_().requires_grad_(True)
-    sm_out = sm(x)
-
-    # torch imp:
-    r = (x - x.max(dim=1, keepdim=True).values)
-    e = r.exp()
-    s = e.sum(dim=1, keepdim=True)
-    sm_th = e / s
-
-    assert np.allclose(sm_th.detach().numpy(), sm_out.detach().numpy())
-
-    # xt = Tensor(x.detach().numpy())
-    # rt = xt - xt.max(dim=1)
-    # et = rt.exp()
-    # st = et.sum()
-    # sm_t = e / s
-
-    # assert np.allclose(sm_out.detach().numpy(), sm_t.data)
