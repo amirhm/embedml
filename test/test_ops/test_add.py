@@ -11,4 +11,3 @@ def test_addition():
     y = Tensor.eye(3)
     z = x + y
     assert np.allclose(z.cpu(), znp)
-

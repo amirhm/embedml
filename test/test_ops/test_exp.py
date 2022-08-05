@@ -6,8 +6,9 @@ import torch
 
 def test_exp():
     xt = Tensor(np.array(1))
+
     def module(x):
-        y = (-2 * x ).exp()
+        y = (-2 * x).exp()
         return (1 - y)
 
     zt = module(xt)
@@ -18,6 +19,7 @@ def test_exp():
     z.backward()
 
     assert np.allclose(zt.cpu(), z.detach())
+
 
 def test_exp_grad():
     x = torch.empty((5, 10)).random_(10).requires_grad_()
