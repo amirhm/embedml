@@ -1,6 +1,7 @@
 from embedml.tensor import Tensor
 import numpy as np
 
+
 def test_sub():
     x = Tensor(np.array(3))
     assert np.allclose((1 - x).cpu(), -2)
@@ -14,7 +15,7 @@ def test_sub_mat():
     xt = Tensor(x)
     yt = Tensor(y)
     assert np.allclose((xt - yt).cpu(), x - y)
-    assert np.allclose((yt -xt).cpu(), y - x)
+    assert np.allclose((yt - xt).cpu(), y - x)
 
 
 def test_sub_mat_grad():
@@ -29,7 +30,7 @@ def test_sub_mat_grad():
 
     xt = Tensor(xn)
     yt = Tensor(yn)
-    zt = (xt -yt).sum()
+    zt = (xt - yt).sum()
     zt.backward()
     assert np.allclose(xt.grad.cpu(), x.grad)
     assert np.allclose(yt.grad.cpu(), y.grad)
@@ -47,7 +48,7 @@ def test_sub_mat_grad_broadcast():
 
     xt = Tensor(xn)
     yt = Tensor(yn)
-    zt = (xt -yt).sum()
+    zt = (xt - yt).sum()
     zt.backward()
     assert np.allclose(xt.grad.cpu(), x.grad)
     assert np.allclose(yt.grad.cpu(), y.grad)
