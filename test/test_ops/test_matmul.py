@@ -17,5 +17,3 @@ def test_simple():
     assert np.allclose(x, xnp)
     assert np.allclose(y, ynp)
     assert np.allclose(z.cpu(), znp)
-
-

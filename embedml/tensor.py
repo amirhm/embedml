@@ -22,6 +22,7 @@ def broadcast(data, shape):
 class Function:
     def __init__(self):
         self.outs = []
+
     def __call__(self, *args, **kwargs):
         ctx = type(self)()
         ctx.parents = args
@@ -75,7 +76,7 @@ class EXP(Function):
         return ret
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = (grad_out * ctx.outs[0]) if ctx.parents[0].requires_grad else None 
+        ctx.parents[0].grad = (grad_out * ctx.outs[0]) if ctx.parents[0].requires_grad else None
 
 
 class SUB(Function):
