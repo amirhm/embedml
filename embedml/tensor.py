@@ -150,18 +150,19 @@ class Tensor:
     def sub(self, other): return self._sub(self, other)
 
     def get_topo_graph(self):
-        topological = [self]
+        topological = []
+        self.grad = Tensor(np.array(1), requires_grad=False)
 
         def _backward(node, visited, topological):
-            if node.ctx is None:
-                return
-            for n in node.ctx.parents:
-                if n not in visited and n.requires_grad:
-                    visited.add(n)
-                    topological.append(n)
-                    _backward(n, visited, topological)
+            visited.add(node)
+            if node.ctx:
+                for n in node.ctx.parents:
+                    if n not in visited:
+                        n.grad = Tensor.zeros(n.shape)
+                        _backward(n, visited, topological)
+            topological.append(node)
         _backward(self, set(), topological)
-        return topological
+        return reversed(topological)
 
     def backward(self):
         # Only placeholder to be implemented
