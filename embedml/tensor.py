@@ -38,8 +38,8 @@ class MATMUL(Function):
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1.grad = Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False) if x1.requires_grad else None
-        x2.grad = Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False) if x2.requires_grad else None
+        x1.grad += Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False) if x1.requires_grad else None
+        x2.grad += Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False) if x2.requires_grad else None
 
 
 class SUM(Function):
@@ -48,7 +48,7 @@ class SUM(Function):
         return Tensor(np.sum(x1.data, **kwargs, keepdims=True), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor(extend(grad_out.data, ctx.parents[0].shape, ctx.axis), requires_grad=False) if ctx.parents[0].requires_grad else None
+        ctx.parents[0].grad += Tensor(extend(grad_out.data, ctx.parents[0].shape, ctx.axis), requires_grad=False) if ctx.parents[0].requires_grad else None
 
 
 class ADD(Function):
@@ -57,8 +57,10 @@ class ADD(Function):
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
-        x2.grad = Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+        if x1.requires_grad:
+            x1.grad += Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False)
+        if x2.requires_grad:
+            x2.grad += Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False)
 
 
 class MAX(Function):
@@ -66,7 +68,7 @@ class MAX(Function):
         return Tensor(np.max(x1.data, **kwargs), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
+        ctx.parents[0].grad += Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
 
 
 class EXP(Function):
@@ -76,7 +78,7 @@ class EXP(Function):
         return ret
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad = (grad_out * ctx.outs[0]) if ctx.parents[0].requires_grad else None
+        ctx.parents[0].grad += (grad_out * ctx.outs[0]) if ctx.parents[0].requires_grad else None
 
 
 class SUB(Function):
@@ -85,8 +87,10 @@ class SUB(Function):
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1.grad = Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False) if x1.requires_grad else None
-        x2.grad = Tensor(broadcast(-grad_out.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+        if x1.requires_grad:
+            x1.grad += Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False)
+        if x2.requires_grad:
+            x2.grad += Tensor(broadcast(-grad_out.data, x2.shape), requires_grad=False)
 
 
 class MUL(Function):
@@ -95,8 +99,10 @@ class MUL(Function):
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1.grad = Tensor(grad_out.cpu() * x2.data, requires_grad=False) if x1.requires_grad else None
-        x2.grad = Tensor(broadcast(grad_out.cpu() * x1.data, x2.shape), requires_grad=False) if x2.requires_grad else None
+        if x1.requires_grad:
+            x1.grad += Tensor(grad_out.cpu() * x2.data, requires_grad=False)
+        if x2.requires_grad:
+            x2.grad += Tensor(broadcast(grad_out.cpu() * x1.data, x2.shape), requires_grad=False)
 
 
 class RELU(Function):
@@ -112,10 +118,10 @@ class POW(Function):
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
             tmp = ctx.parents[1] * np.power(ctx.parents[0].data, ctx.parents[1].data - 1)
-            ctx.parents[0].grad = (grad_out * tmp)
+            ctx.parents[0].grad += (grad_out * tmp)
         if ctx.parents[1].requires_grad:
             tmp = Tensor(np.log(ctx.parents[0].data) * ctx.outs[0].data)
-            ctx.parents[1].grad = broadcast(grad_out * tmp, ctx.parents[1].shape)
+            ctx.parents[1].grad += broadcast(grad_out * tmp, ctx.parents[1].shape)
 
 
 class LOG(Function):
@@ -191,8 +197,8 @@ class Tensor:
             if node.ctx:
                 node.ctx.backward(node.grad)
 
-#    def __repr__(self):
-#        return f"{self.data}"
+    def __repr__(self):
+        return f"{self.data}"
 
 
 for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW']:
