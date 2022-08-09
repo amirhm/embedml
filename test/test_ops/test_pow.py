@@ -41,6 +41,6 @@ def test_pow_xy_grad():
     zt = xt ** yt
     zt.sum().backward()
 
-    assert np.array_equal(zt.cpu(), z.detach().numpy())
+    assert np.allclose(zt.cpu(), z.detach().numpy())
     assert np.allclose(xt.grad.cpu(), x.grad)
     assert np.allclose(yt.grad.cpu(), y.grad)
