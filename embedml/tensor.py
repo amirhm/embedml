@@ -2,6 +2,21 @@ import numpy as np
 from collections import deque
 
 
+def max_broad(max_idx, grad_out, axis, grad):
+    shape = max_idx.shape
+    dims_strides = np.cumprod((1, *shape[::-1]))[::-1]
+    dims = np.zeros_like(shape)
+    if axis is None:
+        grad0 = grad.reshape(-1)
+        grad0[max_idx] = grad_out.data
+    else:
+        for v, (i, d) in enumerate(zip(max_idx.flatten(), grad_out.flatten())):
+            for j in range(len(shape)):
+                dims[j] = (v // dims_strides[j + 1]) % shape[j]
+            dims[axis] = i
+            grad[tuple(dims)] = d
+
+
 def extend(data, shape, axis):
     ext_shape = tuple(shape[i] if axis in (i, -1) else 1 for i in range(len(shape)))
     return np.tile(data, ext_shape)
@@ -11,6 +26,8 @@ def broadcast(data, shape):
     src_shape = data.shape
     if src_shape == shape:
         return data
+    elif shape == ():
+        return data.sum()
     if shape[0] == src_shape[0]:
         return data.sum(axis=-1, keepdims=True)
     elif shape[0] == src_shape[-1]:
@@ -65,10 +82,16 @@ class ADD(Function):
 
 class MAX(Function):
     def forward(ctx, x1, **kwargs):
-        return Tensor(np.max(x1.data, **kwargs), ctx=ctx)
+        tmp = np.max(x1.data, **kwargs)
+        ctx.max_idx = np.argmax(x1.data, **kwargs)
+        ctx.axis = kwargs.get("axis", None)
+        return Tensor(tmp, ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad += Tensor.ones(ctx.parents[0].shape, requires_grad=False) if ctx.parents[0].requires_grad else None
+        if ctx.parents[0].requires_grad:
+            tmp = np.zeros(ctx.parents[0].shape)
+            max_broad(ctx.max_idx, grad_out, ctx.axis, tmp)
+            ctx.parents[0].grad += tmp
 
 
 class EXP(Function):
@@ -145,8 +168,8 @@ class Tensor:
         return cls(np.ones(shape, dtype=np.float32), requires_grad=requires_grad)
 
     @classmethod
-    def zeros(cls, shape):
-        return cls(np.zeros(shape, dtype=np.float32))
+    def zeros(cls, shape, requires_grad=False):
+        return cls(np.zeros(shape, dtype=np.float32), requires_grad=requires_grad)
 
     @staticmethod
     def totensor(func):
@@ -155,6 +178,9 @@ class Tensor:
             vals = (Tensor(np.array(val), dtype=np.float32, requires_grad=False) if isinstance(val, int) else val for val in args)
             return func(*vals, **kwargs)
         return inner
+
+    def flatten(self):
+        return self.data.flatten()
 
     def cpu(self):
         return np.array(self.data)
