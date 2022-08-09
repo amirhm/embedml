@@ -14,7 +14,7 @@ from embedml.tensor import Tensor
         torch.tensor(np.random.randn(5, 1), requires_grad=True)
     )
     ])
-def test_div_xy_grad_1(x, y):
+def test_div_xy_grad(x, y):
     z = x / y
     y.retain_grad()
     z.sum().backward()
@@ -29,7 +29,7 @@ def test_div_xy_grad_1(x, y):
     assert np.allclose(yt.grad.cpu(), y.grad)
 
 
-def test_div_xy_grad_4():
+def test_div_xy_grad_com_graph():
     r = torch.randn((5, 10), requires_grad=True)
     x = (r - r.max(dim=1, keepdim=True).values).requires_grad_(True)
     y = torch.ones((5, 1), requires_grad=True)
