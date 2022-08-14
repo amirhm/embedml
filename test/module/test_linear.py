@@ -59,7 +59,7 @@ def test_linear_module(bs, feature_in, feature_out):
     tc0 = x.matmul(W)
     tc = tc0 + b
 
-    assert np.allclose(c0.detach().numpy(), tc.data, rtol=1e-3)
+    assert np.allclose(c0.detach().numpy(), tc.data, rtol=1e-3, atol=1e-3)
     tc1 = tc.sum()
     assert np.allclose(c.detach().numpy(), tc1.data, rtol=1e-3)
     tc1.backward()
@@ -90,10 +90,11 @@ def test_nn_linear(bs, feature_in, feature_out):
     lt.bias = Tensor(b)
     tc = lt(x)
 
-    assert np.allclose(c0.detach().numpy(), tc.data)
+    limit = {"rtol":1e-3, "atol":1e-3}
+    assert np.allclose(c0.detach().numpy(), tc.data, **limit)
     tc1 = tc.sum()
-    assert np.allclose(c.detach().numpy(), tc1.data)
+    assert np.allclose(c.detach().numpy(), tc1.data, **limit)
     tc1.backward()
-    assert np.allclose(l1.weight.grad, lt.weight.grad.data.T)
-    assert np.allclose(l1.bias.grad, lt.bias.grad.data)
+    assert np.allclose(l1.weight.grad, lt.weight.grad.data.T, **limit)
+    assert np.allclose(l1.bias.grad, lt.bias.grad.data, **limit)
     print(lt.weight.shape)
