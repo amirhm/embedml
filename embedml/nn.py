@@ -21,3 +21,15 @@ class Linear(Module):
 
     def forward(self, x):
         return x.matmul(self.weight) + self.bias
+
+
+class Softmax(Module):
+    def __init__(self, dim=None):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, x):
+        e = (x - x.max(axis=self.dim, keepdims=True)).exp()
+        s = e.sum(axis=self.dim)
+        sm = e.div(s)
+        return sm

@@ -90,7 +90,7 @@ def test_nn_linear(bs, feature_in, feature_out):
     lt.bias = Tensor(b)
     tc = lt(x)
 
-    limit = {"rtol":1e-3, "atol":1e-3}
+    limit = {"rtol": 1e-3, "atol": 1e-3}
     assert np.allclose(c0.detach().numpy(), tc.data, **limit)
     tc1 = tc.sum()
     assert np.allclose(c.detach().numpy(), tc1.data, **limit)
