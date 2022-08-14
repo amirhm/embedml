@@ -211,7 +211,7 @@ class Tensor:
                     if n not in visited:
                         n.grad = Tensor.zeros(n.shape)
                         _backward(n, visited, topological)
-            topological.append(node)
+                topological.append(node)
         _backward(self, set(), topological)
         return reversed(topological)
 
