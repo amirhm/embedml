@@ -11,6 +11,19 @@ class Module:
     def forward(ctx, *args, **kwargs): raise NotImplementedError
     def backward(ctx, *args, **kwargs): raise NotImplementedError
 
+    def get_parameters(self):
+        params = []
+
+        def parameters(obj):
+            nonlocal params
+            if isinstance(obj, Tensor) and obj.requires_grad:
+                params += [obj]
+            if hasattr(obj, "__dict__"):
+                for k, v in obj.__dict__.items():
+                    parameters(v)
+        parameters(self)
+        return params
+
 
 class Linear(Module):
     def __init__(self, feature_in, feature_out):
