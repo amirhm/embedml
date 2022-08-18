@@ -55,8 +55,10 @@ class MATMUL(Function):
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
-        x1.grad += Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False) if x1.requires_grad else None
-        x2.grad += Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False) if x2.requires_grad else None
+        if x1.requires_grad:
+            x1.grad += Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False)
+        if x2.requires_grad:
+            x2.grad += Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False)
 
 
 class SUM(Function):
@@ -65,7 +67,8 @@ class SUM(Function):
         return Tensor(np.sum(x1.data, **kwargs, keepdims=True), ctx=ctx)
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad += Tensor(extend(grad_out.data, ctx.parents[0].shape, ctx.axis), requires_grad=False) if ctx.parents[0].requires_grad else None
+        if ctx.parents[0].requires_grad:
+            ctx.parents[0].grad += Tensor(extend(grad_out.data, ctx.parents[0].shape, ctx.axis), requires_grad=False)
 
 
 class ADD(Function):
@@ -148,7 +151,13 @@ class POW(Function):
 
 
 class LOG(Function):
-    pass
+    def forward(ctx, x):
+        ret = Tensor(np.log(x.data), ctx=ctx)
+        return ret
+
+    def backward(ctx, grad_out):
+        if ctx.parents[0].requires_grad:
+            ctx.parents[0].grad += (grad_out * (ctx.parents[0] ** -1))
 
 
 class Tensor:
@@ -192,6 +201,7 @@ class Tensor:
 
     def exp(self): return self._exp(self)
     def pow(self, p): return self._pow(self, p)
+    def log(self): return self._log(self)
     def max(self, **kwargs): return self._max(self, **kwargs)
 
     def div(self, other): return self * (other ** -1)
@@ -227,7 +237,7 @@ class Tensor:
         return f"{self.data}"
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
 
