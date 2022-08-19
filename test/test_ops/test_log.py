@@ -11,7 +11,7 @@ def test_log():
     yt = xt.log()
 
     assert np.allclose(xt.cpu(), x.detach())
-    assert np.allclose(yt.cpu(), y.detach())
+    assert np.allclose(yt.cpu(), y.detach(), rtol=1e-5)
 
 
 def test_log_xint_grad():

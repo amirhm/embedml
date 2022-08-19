@@ -152,6 +152,7 @@ class POW(Function):
 
 class LOG(Function):
     def forward(ctx, x):
+        x.data[x.data <= 1e-7] = 1e-7
         ret = Tensor(np.log(x.data), ctx=ctx)
         return ret
 
