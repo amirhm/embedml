@@ -1,4 +1,5 @@
 from embedml.tensor import Tensor
+import numpy as np
 
 
 class Module:
@@ -29,8 +30,8 @@ class Linear(Module):
     def __init__(self, feature_in, feature_out):
         self.fin = feature_in
         self.fout = feature_out
-        self.weight = Tensor.ones((self.fin, self.fout), requires_grad=True)
-        self.bias = Tensor.ones((self.fout), requires_grad=True)
+        self.weight = Tensor(np.random.randn(self.fin, self.fout), requires_grad=True)
+        self.bias = Tensor(np.random.randn(self.fout), requires_grad=True)
 
     def forward(self, x):
         return x.matmul(self.weight) + self.bias
@@ -45,4 +46,16 @@ class Softmax(Module):
         e = (x - x.max(axis=self.dim, keepdims=True)).exp()
         s = e.sum(axis=self.dim)
         sm = e.div(s)
+        return sm
+
+
+class LogSoftmax(Module):
+    def __init__(self, dim=None):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, x):
+        e = (x - x.max(axis=self.dim, keepdims=True)).exp()
+        s = e.sum(axis=self.dim)
+        sm = e.log() - s.log()
         return sm
