@@ -9,8 +9,8 @@ class Module:
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
-    def forward(ctx, *args, **kwargs): raise NotImplementedError
-    def backward(ctx, *args, **kwargs): raise NotImplementedError
+    def forward(ctx, *args, **kwargs): raise NotImplementedError  # noqa: E704
+    def backward(ctx, *args, **kwargs): raise NotImplementedError  # noqa: E704
 
     def get_parameters(self):
         params = []

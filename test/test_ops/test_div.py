@@ -13,7 +13,7 @@ from embedml.tensor import Tensor
         torch.zeros((5, 10), requires_grad=True),
         torch.tensor(np.random.randn(5, 1), requires_grad=True)
     )
-    ])
+])
 def test_div_xy_grad(x, y):
     z = x / y
     y.retain_grad()
