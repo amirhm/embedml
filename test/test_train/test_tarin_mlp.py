@@ -30,7 +30,12 @@ def test_train_linear():
     y = m(x)
     loss = (y * target).sum()
 
+    params = m.get_parameters()
+    assert len(params) == 4, "learnable params should be 4, before backward"
     loss.backward()
+    params = m.get_parameters()
+    assert len(params) == 4, "learnable params should be 4, should not change after backward"
+    assert all([m.grad.requires_grad is False for m in params])
 
 
 if __name__ == "__main__":

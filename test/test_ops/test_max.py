@@ -41,6 +41,9 @@ def test_max_grad0(axis):
     assert np.allclose(xt.grad.data, x.grad)
     assert np.allclose(mt.grad.data, m.grad)
 
+    assert not xt.grad.requires_grad
+    assert not mt.grad.requires_grad
+
 
 @pytest.mark.parametrize('axis', [(0), (1)])
 def test_max_grad(axis):
