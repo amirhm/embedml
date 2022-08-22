@@ -43,6 +43,7 @@ class Function:
     def __call__(self, *args, **kwargs):
         ctx = type(self)()
         ctx.parents = args
+        ctx.requires_grad = any(ar.requires_grad for ar in args if isinstance(ar, Tensor))
         return ctx.forward(*args, **kwargs)
 
     def forward(ctx, *args, **kwargs): raise NotImplementedError
@@ -51,7 +52,7 @@ class Function:
 
 class MATMUL(Function):
     def forward(ctx, x1, x2):
-        return Tensor(np.matmul(x1.data, x2.data), ctx=ctx)
+        return Tensor(np.matmul(x1.data, x2.data), requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
@@ -64,7 +65,7 @@ class MATMUL(Function):
 class SUM(Function):
     def forward(ctx, x1, **kwargs):
         ctx.axis = kwargs.get("axis", -1)
-        return Tensor(np.sum(x1.data, **kwargs, keepdims=True), ctx=ctx)
+        return Tensor(np.sum(x1.data, **kwargs, keepdims=True), requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
@@ -73,7 +74,7 @@ class SUM(Function):
 
 class ADD(Function):
     def forward(ctx, x1, x2):
-        return Tensor(x1.data + x2.data, ctx=ctx)
+        return Tensor(x1.data + x2.data, requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
@@ -88,18 +89,19 @@ class MAX(Function):
         tmp = np.max(x1.data, **kwargs)
         ctx.max_idx = np.argmax(x1.data, **kwargs)
         ctx.axis = kwargs.get("axis", None)
-        return Tensor(tmp, ctx=ctx)
+        return Tensor(tmp, requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
             tmp = np.zeros(ctx.parents[0].shape)
             max_broad(ctx.max_idx, grad_out, ctx.axis, tmp)
-            ctx.parents[0].grad += tmp
+            tmp_g = Tensor(tmp, requires_grad=False)
+            ctx.parents[0].grad += tmp_g
 
 
 class EXP(Function):
     def forward(ctx, x1):
-        ret = Tensor(np.exp(x1.data), ctx=ctx)
+        ret = Tensor(np.exp(x1.data), requires_grad=ctx.requires_grad, ctx=ctx)
         ctx.outs.append(ret)
         return ret
 
@@ -109,7 +111,7 @@ class EXP(Function):
 
 class SUB(Function):
     def forward(ctx, x1, x2):
-        return Tensor(x1.data - x2.data, ctx=ctx)
+        return Tensor(x1.data - x2.data, requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
@@ -121,7 +123,7 @@ class SUB(Function):
 
 class MUL(Function):
     def forward(ctx, x1, x2):
-        return Tensor(x1.data * x2.data, ctx=ctx)
+        return Tensor(x1.data * x2.data, requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
@@ -137,7 +139,7 @@ class RELU(Function):
 
 class POW(Function):
     def forward(ctx, x1, x2):
-        ret = Tensor(np.power(x1.data, x2.data), ctx=ctx)
+        ret = Tensor(np.power(x1.data, x2.data), requires_grad=ctx.requires_grad, ctx=ctx)
         ctx.outs.append(ret)
         return ret
 
@@ -153,7 +155,7 @@ class POW(Function):
 class LOG(Function):
     def forward(ctx, x):
         x.data[x.data <= 1e-7] = 1e-7
-        ret = Tensor(np.log(x.data), ctx=ctx)
+        ret = Tensor(np.log(x.data), requires_grad=ctx.requires_grad, ctx=ctx)
         return ret
 
     def backward(ctx, grad_out):
