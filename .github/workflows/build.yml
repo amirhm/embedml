@@ -38,3 +38,12 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+        
+    - name: Coverage report
+      with:
+        auth: ${{ secrets.GIST_SEC }}
+        gistID: 3da660ce00deead1be5445c2dc71b156
+        filename: coverage.json
+        label: coverage
+        message: 100%
+        color: Green
