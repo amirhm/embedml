@@ -239,6 +239,10 @@ class Tensor:
     def __repr__(self):
         return f"{self.data}"
 
+    def move(self, x):
+        self.data = x.data
+        return self
+
 
 for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
@@ -247,6 +251,7 @@ for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG']:
 def add_method(name, method):
     setattr(Tensor, f"__{name}__", lambda self, x: Tensor.totensor(method)(self, x))
     setattr(Tensor, f"__r{name}__", lambda self, x: Tensor.totensor(method)(x, self))
+    setattr(Tensor, f"__i{name}__", lambda self, x: self.move(Tensor.totensor(method)(self, x)))
 
 
 deque((add_method(func, getattr(Tensor, func)) for func in ['add', 'mul', 'sub', 'pow']), maxlen=0)
