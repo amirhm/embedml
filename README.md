@@ -11,6 +11,13 @@ Smaller sibling or framworks like pytorch or jax :) and useful to see how the be
 
 ***and it is only less than 200 lines of code!***
 
+## Instal
+
+````
+pip install embedml
+````
+
+
 ## Example tarinig simiar to pytorch:
 
 ```python
@@ -45,6 +52,10 @@ print(grad_tanh(1.0))   # Evaluate it at x = 1.0
 
 and similar (backward gradient) with embedML:
 ```python
+
+import numpy as np
+from embedml.tensor import Tensor
+
 def tanh(x):  # Define a function
     y = (-2 * x).exp()
     return (1 - y).div((1 + y))
