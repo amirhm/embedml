@@ -9,7 +9,7 @@ I started the repo with building a simple compiler for embeded platfroms, but la
 Could be used mostly for the Educational purpose as well. Easy and full python implemtation using numpy. 
 Smaller sibling or framworks like pytorch or jax :) and useful to see how the behind the scene of those bigger platfrom.
 
-
+***and it is only less than 200 lines of code!***
 
 ## Example tarinig simiar to pytorch:
 
@@ -28,5 +28,30 @@ for param in params:
   param -= param.grad * self.lr
 ```
 
+# Example of differentiation of a funtion 
+form Jax example:
+```python
+from jax import grad
+import jax.numpy as jnp
 
+def tanh(x):  # Define a function
+  y = jnp.exp(-2.0 * x)
+  return (1.0 - y) / (1.0 + y)
 
+grad_tanh = grad(tanh)  # Obtain its gradient function
+print(grad_tanh(1.0))   # Evaluate it at x = 1.0
+# prints 0.4199743
+```
+
+and similar (backward gradient) with embedML:
+```python
+def tanh(x):  # Define a function
+    y = (-2 * x).exp()
+    return (1 - y).div((1 + y))
+
+x = Tensor(np.array(1))
+y = tanh(x)
+y.backward()
+
+print(x.grad)
+```
