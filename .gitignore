@@ -1,1 +1,6 @@
 *.pyc
+embedml.egg-info*
+.ipynb_*
+build*
+dist*
+.DS_Store
