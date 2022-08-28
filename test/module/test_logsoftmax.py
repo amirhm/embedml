@@ -50,4 +50,4 @@ def test_logsoftmax_grad(dim):
     smt.sum().backward()
 
     assert np.allclose(t_s.detach().numpy(), smt.data)
-    assert np.allclose(t_x.grad, xt.grad.data, rtol=1e-3)
+    assert np.allclose(t_x.grad, xt.grad.data, rtol=1e-3, atol=1e-3)

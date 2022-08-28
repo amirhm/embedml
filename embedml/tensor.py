@@ -163,6 +163,16 @@ class LOG(Function):
             ctx.parents[0].grad += (grad_out * (ctx.parents[0] ** -1))
 
 
+class SLC(Function):
+    def forward(ctx, x, *args):
+        ctx.outs.append(*args)
+        return Tensor(x.data.__getitem__(*args), requires_grad=ctx.requires_grad, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        args = ctx.outs.pop()
+        ctx.parents[0].grad[args] += grad_out.data
+
+
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
         self.dtype = dtype
@@ -221,7 +231,7 @@ class Tensor:
             visited.add(node)
             if node.ctx:
                 for n in node.ctx.parents:
-                    if n not in visited:
+                    if isinstance(n, Tensor) and n not in visited:
                         n.grad = Tensor.zeros(n.shape)
                         _backward(n, visited, topological)
                 topological.append(node)
@@ -239,12 +249,16 @@ class Tensor:
     def __repr__(self):
         return f"{self.data}"
 
+    def __getitem__(self, slc): return self._slc(self, slc)
+
+    def __setitem__(self, slc, x): self.data[slc] = x.data
+
     def move(self, x):
         self.data = x.data
         return self
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
 
