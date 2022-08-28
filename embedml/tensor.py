@@ -163,6 +163,15 @@ class LOG(Function):
             ctx.parents[0].grad += (grad_out * (ctx.parents[0] ** -1))
 
 
+class SLC(Function):
+    def forward(ctx, x, *args):
+        ret = Tensor(x.data.__getitem__(*args), requires_grad=ctx.requires_grad, ctx=ctx)
+        return ret
+
+    def backward(ctx, grad_out):
+        pass
+
+
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
         self.dtype = dtype
@@ -239,12 +248,14 @@ class Tensor:
     def __repr__(self):
         return f"{self.data}"
 
+    def __getitem__(self, slc): return self._slc(self, slc)
+
     def move(self, x):
         self.data = x.data
         return self
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
 
