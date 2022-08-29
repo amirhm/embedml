@@ -79,3 +79,22 @@ class SGD(Optimizer):
     def step(self):
         for param in self.params:
             param -= param.grad * self.lr
+
+
+def one_hot(label, num_classes):
+    shape = label.shape[0], num_classes
+    y = np.zeros(shape)
+    y_ptr = y.reshape((-1,))
+    idx = label.flatten() + np.arange(0, (np.prod(shape)), shape[1])
+    y_ptr[idx] = 1
+    return y
+
+
+class CrossEntropy(Module):
+    def __init__(self, num_class):
+        super().__init__()
+        self.num_class = num_class
+
+    def forward(self, y, target):
+        T = Tensor(one_hot(target, self.num_class), requires_grad=False)
+        return (y * T).sum() * -1
