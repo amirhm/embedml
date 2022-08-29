@@ -60,3 +60,22 @@ class LogSoftmax(Module):
         s = e.sum(axis=self.dim)
         sm = e.log() - s.log()
         return sm
+
+
+class Optimizer:
+    def __init__(self, params):
+        self.params = params
+
+    def zero_grad(self):
+        for param in self.params:
+            param.grad = param.grad * 0
+
+
+class SGD(Optimizer):
+    def __init__(self, params, lr):
+        super().__init__(params)
+        self.lr = lr
+
+    def step(self):
+        for param in self.params:
+            param -= param.grad * self.lr
