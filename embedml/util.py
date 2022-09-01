@@ -26,6 +26,9 @@ class DataLoader:
         if self.shuffle:
             np.random.shuffle(self.idx)
 
+    def __len__(self):
+        return (len(self.dataset) // self.bs)
+
     def __next__(self):
         if self.index < (len(self.dataset) // self.bs):
             slc = slice(self.index * self.bs, (self.index + 1) * self.bs)
