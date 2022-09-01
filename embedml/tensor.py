@@ -134,7 +134,14 @@ class MUL(Function):
 
 
 class RELU(Function):
-    pass
+    def forward(ctx, x1):
+        ctx.outs.append(x1.data > 0)
+        return Tensor(x1.data * (x1.data > 0), requires_grad=ctx.requires_grad, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        idx, x = ctx.outs[0], ctx.parents[0]
+        if x.requires_grad:
+            x.grad[idx] += grad_out[idx]
 
 
 class POW(Function):
@@ -210,6 +217,7 @@ class Tensor:
     def matmul(self, y):
         return self._matmul(self, y)
 
+    def relu(self, **kwargs): return self._relu(self, **kwargs)
     def sum(self, **kwargs): return self._sum(self, **kwargs)
 
     def exp(self): return self._exp(self)
@@ -258,7 +266,7 @@ class Tensor:
         return self
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU']:
     setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
 
 
