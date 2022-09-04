@@ -204,7 +204,7 @@ class Tensor:
     def totensor(func):
 
         def inner(*args, **kwargs):
-            vals = (Tensor(np.array(val), dtype=np.float32, requires_grad=False) if isinstance(val, int) else val for val in args)
+            vals = (Tensor(np.array(val), dtype=np.float32, requires_grad=False) if isinstance(val, int) or isinstance(val, float) else val for val in args)
             return func(*vals, **kwargs)
         return inner
 
