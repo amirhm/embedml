@@ -219,6 +219,9 @@ class Tensor:
         return out * (np.prod(out.shape) / np.prod(self.shape))
 
     def relu(self, **kwargs): return self._relu(self, **kwargs)
+    def sigmoid(self): return (1.0 + (-1 * self).exp()) ** -1
+    def tanh(self): return 2.0 * ((2.0 * self).sigmoid()) - 1.0
+    def gelu(self, **kwargs): return 0.5 * self * (1 + (0.7978845608028654 * (self + 0.044715 * self ** 3)).tanh())
     def sum(self, **kwargs): return self._sum(self, **kwargs)
 
     def exp(self): return self._exp(self)
