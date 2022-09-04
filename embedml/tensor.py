@@ -26,14 +26,11 @@ def broadcast(data, shape):
     src_shape = data.shape
     if src_shape == shape:
         return data
-    elif shape == ():
-        return data.sum()
-    if shape[0] == src_shape[0]:
-        return data.sum(axis=-1, keepdims=True)
-    elif shape[0] == src_shape[-1]:
-        return data.sum(axis=0, keepdims=True)
-    elif shape[1] == src_shape[1]:
-        return data.sum(axis=0, keepdims=True)
+    if len(shape) != len(src_shape):
+        brd = tuple(range(len(src_shape) - len(shape)))
+    else:
+        brd = tuple(idx for idx, j in enumerate(zip(src_shape, shape)) if j[0] != j[1])
+    return data.sum(axis=brd, keepdims=True)
 
 
 class Function:
@@ -130,7 +127,7 @@ class MUL(Function):
         if x1.requires_grad:
             x1.grad += Tensor(grad_out.cpu() * x2.data, requires_grad=False)
         if x2.requires_grad:
-            x2.grad += Tensor(broadcast(grad_out.cpu() * x1.data, x2.shape), requires_grad=False)
+            x2.grad += Tensor(broadcast(grad_out.data * x1.data, x2.shape), requires_grad=False)
 
 
 class RELU(Function):
@@ -225,7 +222,7 @@ class Tensor:
     def sum(self, **kwargs): return self._sum(self, **kwargs)
 
     def exp(self): return self._exp(self)
-    def pow(self, p): return self._pow(self, p)
+    def pow(self, other): return self._pow(self, other)
     def log(self): return self._log(self)
     def max(self, **kwargs): return self._max(self, **kwargs)
 
