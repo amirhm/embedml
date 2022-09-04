@@ -16,7 +16,7 @@ def test_mult():
 
 def test_mat_mul():
     xnp = np.random.randn(5, 10)
-    ynp = np.random.randn(5, 1)
+    ynp = np.random.randn(10)
     znp = xnp * ynp
 
     x = Tensor(xnp)
@@ -27,8 +27,8 @@ def test_mat_mul():
 
 
 def test_mat_mul_grad():
-    xnp = np.random.randn(5, 10)
-    ynp = np.random.randn(5, 1)
+    xnp = np.random.randn(5, 3, 10)
+    ynp = np.random.randn(10)
 
     x = torch.tensor(xnp, requires_grad=True)
     y = torch.tensor(ynp, requires_grad=True)
@@ -47,5 +47,4 @@ def test_mat_mul_grad():
     assert np.array_equal(xt.grad.cpu(), x.grad)
     assert xt.grad.shape == (x.grad.shape)
     assert yt.grad.shape == (y.grad.shape)
-
     assert np.allclose(yt.grad.cpu(), y.grad)
