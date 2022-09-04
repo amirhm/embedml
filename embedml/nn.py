@@ -62,6 +62,19 @@ class LogSoftmax(Module):
         return sm
 
 
+class LayerNorm(Module):
+    def __init__(self, normalized_shape, eps=1e-5):
+        super().__init__()
+        self.normalized_shape = normalized_shape
+        self.weight = Tensor.ones(normalized_shape, requires_grad=True)
+        self.bias = Tensor.zeros(normalized_shape, requires_grad=True)
+        self.eps = eps
+
+    def forward(self, x):
+        xe = x - x.mean(axis=-1)
+        return xe.div(((xe * xe).mean(axis=-1) + self.eps) ** 0.5) * self.weight + self.bias
+
+
 class Optimizer:
     def __init__(self, params):
         self.params = params
