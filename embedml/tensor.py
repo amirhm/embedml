@@ -217,6 +217,10 @@ class Tensor:
     def matmul(self, y):
         return self._matmul(self, y)
 
+    def mean(self, axis=None):
+        out = self.sum(axis=axis)
+        return out * (np.prod(out.shape) / np.prod(self.shape))
+
     def relu(self, **kwargs): return self._relu(self, **kwargs)
     def sum(self, **kwargs): return self._sum(self, **kwargs)
 
