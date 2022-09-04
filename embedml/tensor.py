@@ -234,6 +234,9 @@ class Tensor:
     def add(self, other): return self._add(self, other)
     def mul(self, other): return self._mul(self, other)
     def sub(self, other): return self._sub(self, other)
+    def dropout(self, p):
+        _mask = np.random.binomial(1, 1.0 - p, size=self.shape)
+        return self * Tensor(_mask, requires_grad=False) * (1 / (1.0 - p))
 
     def get_topo_graph(self):
         topological = []
