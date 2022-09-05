@@ -1,5 +1,6 @@
 import numpy as np
 from collections import deque
+import sys
 
 
 def max_broad(max_idx, grad_out, axis, grad):
@@ -37,8 +38,9 @@ class Function:
     def __init__(self):
         self.outs = []
 
-    def __call__(self, *args, **kwargs):
-        ctx = type(self)()
+    @classmethod
+    def call(cls, *args, **kwargs):
+        ctx = cls()
         ctx.parents = args
         ctx.requires_grad = any(ar.requires_grad for ar in args if isinstance(ar, Tensor))
         return ctx.forward(*args, **kwargs)
@@ -274,7 +276,7 @@ class Tensor:
 
 
 for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU']:
-    setattr(Tensor, f'_{func.lower()}', eval(f"{func}()"))
+    setattr(Tensor, f'_{func.lower()}', getattr(sys.modules[__name__], func).call)
 
 
 def add_method(name, method):
