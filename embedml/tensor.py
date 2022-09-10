@@ -1,6 +1,7 @@
 import numpy as np
 from collections import deque
 import sys
+from functools import partialmethod
 
 
 def max_broad(max_idx, grad_out, axis, grad):
@@ -214,28 +215,29 @@ class Tensor:
         return np.array(self.data)
 
     def matmul(self, y):
-        return self._matmul(self, y)
+        return self._matmul(y)
 
     def mean(self, axis=None):
         out = self.sum(axis=axis)
         return out * (np.prod(out.shape) / np.prod(self.shape))
 
-    def relu(self, **kwargs): return self._relu(self, **kwargs)
+    def relu(self, **kwargs): return self._relu(**kwargs)
     def sigmoid(self): return (1.0 + (-1 * self).exp()) ** -1
     def tanh(self): return 2.0 * ((2.0 * self).sigmoid()) - 1.0
     def gelu(self, **kwargs): return 0.5 * self * (1 + (0.7978845608028654 * (self + 0.044715 * self ** 3)).tanh())
-    def sum(self, **kwargs): return self._sum(self, **kwargs)
+    def sum(self, **kwargs): return self._sum(**kwargs)
 
-    def exp(self): return self._exp(self)
-    def pow(self, other): return self._pow(self, other)
-    def log(self): return self._log(self)
-    def max(self, **kwargs): return self._max(self, **kwargs)
+    def exp(self): return self._exp()
+    def pow(self, other): return self._pow(other)
+    def log(self): return self._log()
+    def max(self, **kwargs): return self._max(**kwargs)
 
     def div(self, other): return self * (other ** -1)
 
-    def add(self, other): return self._add(self, other)
-    def mul(self, other): return self._mul(self, other)
-    def sub(self, other): return self._sub(self, other)
+    def add(self, other): return self._add(other)
+    def mul(self, other): return self._mul(other)
+    def sub(self, other): return self._sub(other)
+
     def dropout(self, p):
         _mask = np.random.binomial(1, 1.0 - p, size=self.shape)
         return self * Tensor(_mask, requires_grad=False) * (1 / (1.0 - p))
@@ -266,7 +268,7 @@ class Tensor:
     def __repr__(self):
         return f"{self.data}"
 
-    def __getitem__(self, slc): return self._slc(self, slc)
+    def __getitem__(self, slc): return self._slc(slc)
 
     def __setitem__(self, slc, x): self.data[slc] = x.data
 
@@ -276,7 +278,7 @@ class Tensor:
 
 
 for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU']:
-    setattr(Tensor, f'_{func.lower()}', getattr(sys.modules[__name__], func).call)
+    setattr(Tensor, f'_{func.lower()}', partialmethod(getattr(sys.modules[__name__], func).call))
 
 
 def add_method(name, method):
