@@ -180,6 +180,16 @@ class SLC(Function):
         ctx.parents[0].grad[args] += grad_out.data
 
 
+class PERMUTE(Function):
+    def forward(ctx, x, *args):
+        ctx.outs.append((*args, dest := tuple(range(x.data.ndim))))
+        return Tensor(np.moveaxis(x.data, *args, dest), requires_grad=ctx.requires_grad, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        src, dest = ctx.outs.pop()
+        ctx.parents[0].grad += Tensor(np.moveaxis(grad_out.data, dest, src), requires_grad=False)
+
+
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
         self.dtype = dtype
@@ -237,6 +247,7 @@ class Tensor:
     def add(self, other): return self._add(other)
     def mul(self, other): return self._mul(other)
     def sub(self, other): return self._sub(other)
+    def permute(self, *orders): return self._permute(*orders)
 
     def dropout(self, p):
         _mask = np.random.binomial(1, 1.0 - p, size=self.shape)
@@ -277,7 +288,7 @@ class Tensor:
         return self
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU', 'PERMUTE']:
     setattr(Tensor, f'_{func.lower()}', partialmethod(getattr(sys.modules[__name__], func).call))
 
 
