@@ -35,3 +35,13 @@ def test_permute_grad(ndim):
     le = ze.sum()
     le.backward()
     assert np.allclose(x.grad, xe.grad.data, atol=1e-4, rtol=1e-4)
+
+
+@pytest.mark.parametrize('ndim', [3, 2, 5])
+def test_transpose(ndim):
+    sh = np.random.randint(1, 5, ndim)
+    x = torch.randn(*sh).float().requires_grad_(True)
+    y = x.transpose(-1, -2)
+    sh[-1], sh[-2] = sh[-2], sh[-1]
+    expected_shape = tuple(sh)
+    assert y.shape == expected_shape
