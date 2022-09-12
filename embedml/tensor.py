@@ -190,6 +190,16 @@ class PERMUTE(Function):
         ctx.parents[0].grad += Tensor(np.moveaxis(grad_out.data, dest, src), requires_grad=False)
 
 
+class RESHAPE(Function):
+    def forward(ctx, x, shape):
+        ctx.outs.append((shape, x.shape))
+        return Tensor(np.reshape(x.data, shape), requires_grad=ctx.requires_grad, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        _, oshape = ctx.outs.pop()
+        ctx.parents[0].grad += Tensor(np.reshape(grad_out.data, oshape), requires_grad=False)
+
+
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
         self.dtype = dtype
@@ -248,6 +258,7 @@ class Tensor:
     def mul(self, other): return self._mul(other)
     def sub(self, other): return self._sub(other)
     def permute(self, *orders): return self._permute(*orders)
+    def reshape(self, shape): return self._reshape(shape)
 
     def dropout(self, p):
         _mask = np.random.binomial(1, 1.0 - p, size=self.shape)
@@ -288,7 +299,7 @@ class Tensor:
         return self
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU', 'PERMUTE']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU', 'PERMUTE', 'RESHAPE']:
     setattr(Tensor, f'_{func.lower()}', partialmethod(getattr(sys.modules[__name__], func).call))
 
 
