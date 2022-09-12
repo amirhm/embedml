@@ -181,9 +181,9 @@ class SLC(Function):
 
 
 class PERMUTE(Function):
-    def forward(ctx, x, *args):
-        ctx.outs.append((*args, dest := tuple(range(x.data.ndim))))
-        return Tensor(np.moveaxis(x.data, *args, dest), requires_grad=ctx.requires_grad, ctx=ctx)
+    def forward(ctx, x, args):
+        ctx.outs.append((args, dest := tuple(range(x.data.ndim))))
+        return Tensor(np.moveaxis(x.data, args, dest), requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         src, dest = ctx.outs.pop()
@@ -257,8 +257,13 @@ class Tensor:
     def add(self, other): return self._add(other)
     def mul(self, other): return self._mul(other)
     def sub(self, other): return self._sub(other)
-    def permute(self, *orders): return self._permute(*orders)
+    def permute(self, orders): return self._permute(orders)
     def reshape(self, shape): return self._reshape(shape)
+
+    def transpose(self, dim0=-2, dim1=-1):
+        shape = list(range(len(self.shape)))
+        shape[dim0], shape[dim1] = shape[dim1], shape[dim0]
+        return self.permute(tuple(shape))
 
     def dropout(self, p):
         _mask = np.random.binomial(1, 1.0 - p, size=self.shape)
