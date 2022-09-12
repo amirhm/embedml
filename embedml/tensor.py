@@ -57,9 +57,9 @@ class MATMUL(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         if x1.requires_grad:
-            x1.grad += Tensor(np.matmul(grad_out.cpu(), x2.cpu().T), requires_grad=False)
+            x1.grad += grad_out.matmul(x2.transpose())
         if x2.requires_grad:
-            x2.grad += Tensor(np.matmul(x1.cpu().T, grad_out.cpu()), requires_grad=False)
+            x2.grad += x1.transpose().matmul(grad_out)
 
 
 class SUM(Function):
