@@ -21,7 +21,7 @@ def max_broad(max_idx, grad_out, axis, grad):
 
 def extend(data, shape, axis):
     ext_shape = tuple(shape[i] if axis in (i, -1) else 1 for i in range(len(shape)))
-    return np.tile(data, ext_shape)
+    return Tensor(np.tile(data.data, ext_shape), requires_grad=data.requires_grad)
 
 
 def broadcast(data, shape):
@@ -65,11 +65,12 @@ class MATMUL(Function):
 class SUM(Function):
     def forward(ctx, x1, **kwargs):
         ctx.axis = kwargs.get("axis", -1)
-        return Tensor(np.sum(x1.data, **kwargs, keepdims=True), requires_grad=ctx.requires_grad, ctx=ctx)
+        kwargs["keepdims"] = True
+        return Tensor(np.sum(x1.data, **kwargs), requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
-            ctx.parents[0].grad += Tensor(extend(grad_out.data, ctx.parents[0].shape, ctx.axis), requires_grad=False)
+            ctx.parents[0].grad += extend(grad_out, ctx.parents[0].shape, ctx.axis)
 
 
 class ADD(Function):
@@ -79,9 +80,9 @@ class ADD(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         if x1.requires_grad:
-            x1.grad += Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False)
+            x1.grad += broadcast(grad_out, x1.shape)
         if x2.requires_grad:
-            x2.grad += Tensor(broadcast(grad_out.data, x2.shape), requires_grad=False)
+            x2.grad += broadcast(grad_out, x2.shape)
 
 
 class MAX(Function):
@@ -106,7 +107,8 @@ class EXP(Function):
         return ret
 
     def backward(ctx, grad_out):
-        ctx.parents[0].grad += (grad_out * ctx.outs[0]) if ctx.parents[0].requires_grad else None
+        if ctx.parents[0].requires_grad:
+            ctx.parents[0].grad += grad_out * ctx.outs[0]
 
 
 class SUB(Function):
@@ -116,9 +118,9 @@ class SUB(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         if x1.requires_grad:
-            x1.grad += Tensor(broadcast(grad_out.data, x1.shape), requires_grad=False)
+            x1.grad += broadcast(grad_out.data, x1.shape)
         if x2.requires_grad:
-            x2.grad += Tensor(broadcast(-grad_out.data, x2.shape), requires_grad=False)
+            x2.grad += broadcast(-1 * grad_out, x2.shape)
 
 
 class MUL(Function):
@@ -128,9 +130,9 @@ class MUL(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         if x1.requires_grad:
-            x1.grad += Tensor(grad_out.cpu() * x2.data, requires_grad=False)
+            x1.grad += grad_out * x2
         if x2.requires_grad:
-            x2.grad += Tensor(broadcast(grad_out.data * x1.data, x2.shape), requires_grad=False)
+            x2.grad += broadcast(grad_out * x1, x2.shape)
 
 
 class RELU(Function):
