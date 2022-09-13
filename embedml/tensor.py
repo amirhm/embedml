@@ -181,13 +181,13 @@ class SLC(Function):
 
 
 class PERMUTE(Function):
-    def forward(ctx, x, args):
-        ctx.outs.append((args, dest := tuple(range(x.data.ndim))))
-        return Tensor(np.moveaxis(x.data, args, dest), requires_grad=ctx.requires_grad, ctx=ctx)
+    def forward(ctx, x, order):
+        ctx.outs.append(np.argsort(order))
+        return Tensor(np.moveaxis(x.data, order, tuple(range(x.data.ndim))), requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
-        src, dest = ctx.outs.pop()
-        ctx.parents[0].grad += Tensor(np.moveaxis(grad_out.data, dest, src), requires_grad=False)
+        order = ctx.outs.pop()
+        ctx.parents[0].grad += grad_out.permute(order)
 
 
 class RESHAPE(Function):
@@ -197,7 +197,7 @@ class RESHAPE(Function):
 
     def backward(ctx, grad_out):
         _, oshape = ctx.outs.pop()
-        ctx.parents[0].grad += Tensor(np.reshape(grad_out.data, oshape), requires_grad=False)
+        ctx.parents[0].grad += grad_out.reshape(oshape)
 
 
 class Tensor:
