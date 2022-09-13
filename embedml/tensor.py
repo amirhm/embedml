@@ -152,11 +152,9 @@ class POW(Function):
 
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
-            tmp = ctx.parents[1] * np.power(ctx.parents[0].data, ctx.parents[1].data - 1)
-            ctx.parents[0].grad += (grad_out * tmp)
+            ctx.parents[0].grad += grad_out * (ctx.parents[1] * ctx.parents[0] ** (ctx.parents[1] - 1))
         if ctx.parents[1].requires_grad:
-            tmp = Tensor(np.log(ctx.parents[0].data) * ctx.outs[0].data)
-            ctx.parents[1].grad += broadcast(grad_out * tmp, ctx.parents[1].shape)
+            ctx.parents[1].grad += broadcast(grad_out * ctx.parents[0].log() * ctx.outs[0], ctx.parents[1].shape)
 
 
 class LOG(Function):
@@ -167,7 +165,7 @@ class LOG(Function):
 
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
-            ctx.parents[0].grad += (grad_out * (ctx.parents[0] ** -1))
+            ctx.parents[0].grad += grad_out * (ctx.parents[0] ** -1)
 
 
 class SLC(Function):
@@ -177,7 +175,7 @@ class SLC(Function):
 
     def backward(ctx, grad_out):
         args = ctx.outs.pop()
-        ctx.parents[0].grad[args] += grad_out.data
+        ctx.parents[0].grad[args] += grad_out
 
 
 class PERMUTE(Function):
