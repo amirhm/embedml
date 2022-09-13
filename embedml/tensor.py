@@ -4,8 +4,9 @@ import sys
 from functools import partialmethod
 
 
-def max_broad(max_idx, grad_out, axis, grad):
+def max_broad(max_idx, grad_out, axis, out_shape):
     shape = max_idx.shape
+    grad = np.zeros(out_shape)
     dims_strides = np.cumprod((1, *shape[::-1]))[::-1]
     dims = np.zeros_like(shape)
     if axis is None:
@@ -17,6 +18,7 @@ def max_broad(max_idx, grad_out, axis, grad):
                 dims[j] = (v // dims_strides[j + 1]) % shape[j]
             dims[axis] = i
             grad[tuple(dims)] = d
+    return Tensor(grad, requires_grad=False)
 
 
 def extend(data, shape, axis):
@@ -94,10 +96,7 @@ class MAX(Function):
 
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
-            tmp = np.zeros(ctx.parents[0].shape)
-            max_broad(ctx.max_idx, grad_out, ctx.axis, tmp)
-            tmp_g = Tensor(tmp, requires_grad=False)
-            ctx.parents[0].grad += tmp_g
+            ctx.parents[0].grad += max_broad(ctx.max_idx, grad_out, ctx.axis, ctx.parents[0].shape)
 
 
 class EXP(Function):
