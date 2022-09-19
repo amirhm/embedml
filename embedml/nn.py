@@ -84,6 +84,7 @@ class Embedding(Module):
     def forward(self, idx):
         return self.weight._embed(idx, n_embd=self.embd_dim)
 
+
 class Optimizer:
     def __init__(self, params):
         self.params = params

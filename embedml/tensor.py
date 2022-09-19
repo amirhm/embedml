@@ -206,10 +206,10 @@ class RESHAPE(Function):
 class EMBED(Function):
     def forward(ctx, x, idx, *, n_embd):
         ctx.outs.append(idx)
-        out = Tensor.zeros((idx.shape[0], idx.shape[0], n_embd), requires_grad=True)
+        out = Tensor.zeros((idx.shape[0], idx.shape[1], n_embd), requires_grad=True)
         for bdim in range(idx.shape[0]):
             out[bdim] = x[idx[bdim].data]
-        return Tensor(out, requires_grad=ctx.requires_grad, ctx=ctx)
+        return Tensor(out.data, requires_grad=ctx.requires_grad, ctx=ctx)
 
     def backward(ctx, grad_out):
         idx = ctx.outs.pop()
@@ -217,6 +217,7 @@ class EMBED(Function):
         for bdim in range(idx.shape[0]):
             for row, dx in enumerate(idx[bdim]):
                 grad[dx.data] += grad_out[bdim, row]
+
 
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
