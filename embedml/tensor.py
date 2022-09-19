@@ -203,6 +203,21 @@ class RESHAPE(Function):
         ctx.parents[0].grad += grad_out.reshape(oshape)
 
 
+class EMBED(Function):
+    def forward(ctx, x, idx, *, n_embd):
+        ctx.outs.append(idx)
+        out = Tensor.zeros((idx.shape[0], idx.shape[0], n_embd), requires_grad=True)
+        for bdim in range(idx.shape[0]):
+            out[bdim] = x[idx[bdim].data]
+        return Tensor(out, requires_grad=ctx.requires_grad, ctx=ctx)
+
+    def backward(ctx, grad_out):
+        idx = ctx.outs.pop()
+        grad = ctx.parents[0].grad
+        for bdim in range(idx.shape[0]):
+            for row, dx in enumerate(idx[bdim]):
+                grad[dx.data] += grad_out[bdim, row]
+
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
         self.dtype = dtype
@@ -307,7 +322,7 @@ class Tensor:
         return self
 
 
-for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU', 'PERMUTE', 'RESHAPE']:
+for func in ['MATMUL', 'SUM', 'ADD', 'EXP', 'MAX', 'SUB', 'MUL', 'POW', 'LOG', 'SLC', 'RELU', 'PERMUTE', 'RESHAPE', 'EMBED']:
     setattr(Tensor, f'_{func.lower()}', partialmethod(getattr(sys.modules[__name__], func).call))
 
 

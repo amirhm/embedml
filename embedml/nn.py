@@ -75,6 +75,15 @@ class LayerNorm(Module):
         return xe.div(((xe * xe).mean(axis=-1) + self.eps) ** 0.5) * self.weight + self.bias
 
 
+class Embedding(Module):
+    def __init__(self, n_embd, embd_dim):
+        super().__init__()
+        self.embd_dim = embd_dim
+        self.weight = Tensor.ones((n_embd, embd_dim), requires_grad=True)
+
+    def forward(self, idx):
+        return self.weight._embed(idx, n_embd=self.embd_dim)
+
 class Optimizer:
     def __init__(self, params):
         self.params = params
