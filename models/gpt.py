@@ -73,7 +73,7 @@ class GPT(Module):
         assert config.block_size is not None
         cfg = config()
         gpt_nano = dict(n_layer=3, n_head=3, n_embd=48)
-        cfg._replace(**gpt_nano)
+        cfg = cfg._replace(**gpt_nano)
         self.block_size = cfg.block_size
 
         self.transformer = dict(
@@ -116,6 +116,9 @@ def main():
     logits.backward()
     assert gpt.transformer["wte"].weight.shape == (gpt.cfg.vocab_size, gpt.cfg.n_embd)
     assert gpt.transformer["wte"].weight.grad.shape == (gpt.cfg.vocab_size, gpt.cfg.n_embd)
+
+    steps = list(map(lambda x: (x.ctx, x.ctx.parents[0].shape, x.ctx.parents[1].shape if len(x.ctx.parents) > 1 else None), logits.get_topo_graph()))
+    print(*steps, sep="\n")
 
 
 if __name__ == "__main__":
