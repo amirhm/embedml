@@ -22,7 +22,7 @@ def max_broad(max_idx, grad_out, axis, out_shape):
 
 
 def extend(data, shape, axis):
-    ext_shape = tuple(shape[i] if axis in (i, -1) else 1 for i in range(len(shape)))
+    ext_shape = tuple(s if idx in axis else 1 for idx, s in enumerate(shape)) if axis else shape
     return Tensor(np.tile(data.data, ext_shape), requires_grad=data.requires_grad)
 
 
@@ -66,7 +66,11 @@ class MATMUL(Function):
 
 class SUM(Function):
     def forward(ctx, x1, **kwargs):
-        ctx.axis = kwargs.get("axis", -1)
+        if "axis" in kwargs:
+            _axis = kwargs['axis'] if isinstance(kwargs['axis'], tuple) else (kwargs['axis'],)
+            ctx.axis = tuple(d if d >= 0 else (len(x1.shape) - d) for d in _axis)
+        else:
+            ctx.axis = None
         kwargs["keepdims"] = True
         return Tensor(np.sum(x1.data, **kwargs), requires_grad=ctx.requires_grad, ctx=ctx)
 
@@ -117,7 +121,7 @@ class SUB(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         if x1.requires_grad:
-            x1.grad += broadcast(grad_out.data, x1.shape)
+            x1.grad += broadcast(grad_out, x1.shape)
         if x2.requires_grad:
             x2.grad += broadcast(-1 * grad_out, x2.shape)
 
