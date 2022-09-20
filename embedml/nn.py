@@ -1,5 +1,6 @@
 from embedml.tensor import Tensor
 import numpy as np
+from collections import UserDict
 
 
 class Module:
@@ -22,8 +23,19 @@ class Module:
             if hasattr(obj, "__dict__"):
                 for k, v in obj.__dict__.items():
                     parameters(v)
+            if isinstance(obj, ModuleDict):
+                for k, v in obj.data.items():
+                    parameters(v)
+            if isinstance(obj, list):
+                for v in obj:
+                    parameters(v)
         parameters(self)
         return params
+
+
+class ModuleDict(UserDict):
+    def __getattr__(self, atr):
+        return self.data.get(atr, None)
 
 
 class Linear(Module):

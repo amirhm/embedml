@@ -3,6 +3,7 @@ from embedml.nn import Linear
 from embedml.nn import Embedding
 from embedml.nn import Softmax
 from embedml.nn import LayerNorm
+from embedml.nn import ModuleDict
 from collections import namedtuple
 from embedml.tensor import Tensor
 import numpy as np
@@ -60,7 +61,6 @@ class Block(Module):
         self.config = config
 
     def forward(self, x):
-        x = self.ln_1(x)
         x = x + self.attn(self.ln_1(x))
         x = x + (self.c_proj(self.c_fc(self.ln_2(x)).gelu())).dropout(self.config.resid_pdrop)
         return x
@@ -76,7 +76,7 @@ class GPT(Module):
         cfg = cfg._replace(**gpt_nano)
         self.block_size = cfg.block_size
 
-        self.transformer = dict(
+        self.transformer = ModuleDict(
             wte=Embedding(cfg.vocab_size, cfg.n_embd),
             wpe=Embedding(cfg.block_size, cfg.n_embd),
             h=[Block(cfg) for _ in range(cfg.n_layer)],
@@ -92,12 +92,12 @@ class GPT(Module):
         pos = np.arange(0, t, dtype=int).reshape((1, -1))  # shape (1, t)
 
         # forward the GPT model itself
-        tok_emb = self.transformer['wte'](idx)  # token embeddings of shape (b, t, n_embd)
-        pos_emb = self.transformer['wpe'](pos)  # position embeddings of shape (1, t, n_embd)
+        tok_emb = self.transformer.wte(idx)  # token embeddings of shape (b, t, n_embd)
+        pos_emb = self.transformer.wpe(pos)  # position embeddings of shape (1, t, n_embd)
         x = (tok_emb + pos_emb).dropout(self.cfg.embd_pdrop)
-        for block in self.transformer['h']:
+        for block in self.transformer.h:
             x = block(x)
-        x = self.transformer["ln_f"](x)
+        x = self.transformer.ln_f(x)
         logits = self.lm_head(x)
         return logits
 
