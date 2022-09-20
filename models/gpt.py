@@ -46,7 +46,7 @@ class SelfAttention(Module):
 
         # output projection
         y = self.c_proj(y).dropout(self.resid_pdrop)
-        return x
+        return y
 
 
 class Block(Module):
@@ -62,7 +62,7 @@ class Block(Module):
     def forward(self, x):
         x = self.ln_1(x)
         x = x + self.attn(self.ln_1(x))
-        x = x + (self.c_proj(self.c_fc(x).gelu())).dropout(self.config.resid_pdrop)
+        x = x + (self.c_proj(self.c_fc(self.ln_2(x)).gelu())).dropout(self.config.resid_pdrop)
         return x
 
 
