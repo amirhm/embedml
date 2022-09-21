@@ -46,5 +46,18 @@ def test_backward_path():
     bs, T = 5, 4
     inp = Tensor(np.ones((bs, T), dtype=int))
     logits = gpt(inp)
-    logits.sum().backward()
+    loss = logits.sum()
+    loss.backward()
     assert sum(map(lambda x: hasattr(x, 'grad'), m)) == len(m)
+
+    def nodes(node):
+        return [id(n) for n in node.ctx.parents]
+
+    param = list(map(lambda x: id(x), m))
+    bparam = list(map(nodes, loss.get_topo_graph()))
+    t1 = list(filter(lambda x: isinstance(x, list), bparam))
+    bparam = list(filter(lambda x: not isinstance(x, list), bparam))
+    while t1 and (d := t1.pop()):
+        bparam.extend(d)
+    assert all(list(map(lambda x: x in bparam, param)))
+    a = (list(map(lambda x: x in bparam, param)))
