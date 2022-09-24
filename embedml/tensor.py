@@ -31,10 +31,10 @@ def broadcast(data, shape):
     if src_shape == shape:
         return data
     if len(shape) != len(src_shape):
-        brd = tuple(range(len(src_shape) - len(shape)))
+        brd, kd = tuple(range(len(src_shape) - len(shape))), False
     else:
-        brd = tuple(idx for idx, j in enumerate(zip(src_shape, shape)) if j[0] != j[1])
-    return data.sum(axis=brd, keepdims=True)
+        brd, kd = tuple(idx for idx, j in enumerate(zip(src_shape, shape)) if j[0] != j[1]), True
+    return data.data.sum(axis=brd, keepdims=kd)
 
 
 class Function:
@@ -133,7 +133,7 @@ class MUL(Function):
     def backward(ctx, grad_out):
         x1, x2 = ctx.parents
         if x1.requires_grad:
-            x1.grad += grad_out * x2
+            x1.grad += broadcast(grad_out * x2, x1.shape)
         if x2.requires_grad:
             x2.grad += broadcast(grad_out * x1, x2.shape)
 
@@ -157,7 +157,7 @@ class POW(Function):
 
     def backward(ctx, grad_out):
         if ctx.parents[0].requires_grad:
-            ctx.parents[0].grad += grad_out * (ctx.parents[1] * ctx.parents[0] ** (ctx.parents[1] - 1))
+            ctx.parents[0].grad += broadcast(grad_out * (ctx.parents[1] * ctx.parents[0] ** (ctx.parents[1] - 1)), ctx.parents[0].shape)
         if ctx.parents[1].requires_grad:
             ctx.parents[1].grad += broadcast(grad_out * ctx.parents[0].log() * ctx.outs[0], ctx.parents[1].shape)
 
@@ -222,10 +222,13 @@ class EMBED(Function):
 class Tensor:
     def __init__(self, data, dtype=np.float32, requires_grad=True, ctx=None):
         self.dtype = dtype
-        self.shape = data.shape
         self.data = np.array(data)
         self.ctx = ctx
         self.requires_grad = requires_grad
+
+    @property
+    def shape(self):
+        return self.data.shape
 
     @classmethod
     def eye(cls, val):
