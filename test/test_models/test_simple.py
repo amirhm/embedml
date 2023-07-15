@@ -4,6 +4,7 @@ from embedml.nn import LogSoftmax
 from embedml.tensor import Tensor
 import numpy as np
 
+
 class simple(Module):
     def __init__(self):
         super().__init__()
@@ -15,7 +16,7 @@ class simple(Module):
         y0 = self.l1(data).relu()
         y1 = self.ac(self.l2(y0))
         return y1
-    
+
 
 def test_model():
     gpt = simple()
@@ -49,7 +50,6 @@ def test_backward_path():
 
     def nodes(node):
         return [id(n) for n in node.ctx.parents]
-
 
     param = list(map(lambda x: id(x), m))
     bparam = list(map(nodes, loss.get_topo_graph()))
